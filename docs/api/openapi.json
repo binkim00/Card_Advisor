@@ -1,0 +1,3387 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Card Advisor local implemented API",
+    "version": "0.16.0",
+    "description": "로컬 카드 추천 개발 API. 사용자 인증·가상 카드·수동 예산/원장·금융 연결 및 KB/하나 거래 동기화와 Android 확인 흐름 구현. 실금융·추가 인증·공식 상품 규칙·외화/청구월 배분은 미완료."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:18080/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "로컬 서버 상태",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "로컬 계정 가입",
+        "responses": {
+          "201": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "로그인",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "현재 세션 폐기",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        }
+      }
+    },
+    "/demo/setup": {
+      "post": {
+        "summary": "해당 사용자에 가상 카드 두 장과 초기 예산 준비",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        }
+      }
+    },
+    "/cards": {
+      "get": {
+        "summary": "본인 카드 목록",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        }
+      },
+      "post": {
+        "summary": "가상 카드 신규 등록 및 현재 월 초기 스냅샷 생성",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Card"
+              }
+            }
+          }
+        },
+        "description": "같은 ID 재등록은 409. 월별 입력값 변경에는 /cards/{id}/months/{month} 사용. GET /cards의 performanceWon은 재계산된 조회 값입니다."
+      }
+    },
+    "/budgets/{month}": {
+      "get": {
+        "summary": "본인 월 예산",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Budget"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "해당 월 미설정. 0원 예산으로 취급하지 않는다."
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        }
+      },
+      "put": {
+        "summary": "버전 확인 후 월 예산 저장",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Budget"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Budget"
+              }
+            }
+          }
+        },
+        "description": "사용자별 월별 버전 검사. 신규 생성(version=0) 경쟁도409. 충돌 시 DB 값 불변. 같은 버전/동일 값이면 버전과 추천 유지. 실제 변경 시 버전+1 및 기존 추천 무효화. 누락/null/소수/범위 오류422."
+      }
+    },
+    "/transactions": {
+      "get": {
+        "summary": "본인 월 거래·순취소액",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "description": "사용자별 월 가계부. 기존 amount_won/net_won/card_net_won 계산 보존. 조회 전용 merchant_name, display_card_name, card_last_digits(3~4자리만), financial_status, financial_source 추가. 금융 연결 상품→공급자 표기 순서이며 금융 내역이 없을 때만 기존 card_name 사용. 누락값은 null. 금융/상품 JOIN은 사용자 귀속이며 원장 행을 증식하지 않는다. 카드번호/연결 식별자/인증정보 미노출. 표시 카드와 실적 계산 card_id는 별개."
+      }
+    },
+    "/transactions/manual": {
+      "post": {
+        "summary": "멱등 수동 구매 기록",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Entry"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transactions/{id}/cancellations": {
+      "post": {
+        "summary": "원거래 잔액 한도 내 멱등 취소 반영",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cancel"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout-sessions": {
+      "post": {
+        "summary": "2분 유효 주문 스냅샷",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Checkout"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout-sessions/{id}": {
+      "put": {
+        "summary": "금액 변경 및 버전 증가",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recommendations": {
+      "post": {
+        "summary": "가상 규칙의 결정적 카드 비교",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recommendations/{id}": {
+      "get": {
+        "summary": "저장된 결과와 현재 유효성",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        }
+      }
+    },
+    "/me": {
+      "delete": {
+        "summary": "본인 로컬 계정·데이터 삭제",
+        "parameters": [
+          {
+            "name": "X-Confirm-Delete",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "DELETE_ACCOUNT"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        }
+      }
+    },
+    "/cards/performance": {
+      "get": {
+        "summary": "카드별·월별 현재 자격과 다음 달용 실적",
+        "responses": {
+          "200": {
+            "description": "미확인 값은 null. 가상 원구매월 취소 정책으로 재계산.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CardPerformance"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "카드별 stateVersion, untrackedSource, untrackedAsOf, currentQualificationSource, qualificationAsOf, qualificationPeriod를 반환한다. 스냅샷 없는 월은 미확인 값과 version0. performanceSource는 가상 규칙 계산 출처로 입력 원천과 구분한다. 연결 거래별 순승인액×저장된 비율을 원 단위 절삭 후 합산하고 기준 한도로 제한한다. 부분 취소는 원구매 월 전체를 재계산한다. 자격 false는0원, 양수 거래의 자격·환불·규칙·한도 미확인은null. 추천 조회는 혜택을 사용하지 않는다."
+      }
+    },
+    "/cards/{id}/months/{month}": {
+      "put": {
+        "summary": "미기록 기존 실적·이번 자격의 월별 가상 스냅샷 수정",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "VERSION_CONFLICT: 서버 저장값 유지. 최신 버전 조회 전 자동 재시도/덮어쓰기 금지."
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonthState"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/transactions/{id}/card": {
+      "put": {
+        "summary": "수동 거래 카드 연결·수정; 취소 배분이 달라지는 승인액 수정은 거절",
+        "responses": {
+          "200": {
+            "description": "성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "없거나 다른 사용자 객체"
+          },
+          "409": {
+            "description": "버전 또는 멱등 충돌"
+          },
+          "422": {
+            "description": "입력/계산 조건 오류"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkCard"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/transactions/{id}/classification": {
+      "put": {
+        "summary": "거래 카테고리·예산 포함 여부 수정",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassificationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "저장 또는 조회 성공"
+          },
+          "401": {
+            "description": "인증 필요"
+          },
+          "404": {
+            "description": "없거나 타 사용자 리소스"
+          },
+          "409": {
+            "description": "VERSION_CONFLICT. 초안 보존 후 명시적 최신 분류 조회"
+          },
+          "422": {
+            "description": "잘못된 분류/포함 여부/버전"
+          }
+        },
+        "description": "성공 시 재조회 가능한 거래를 반환한다. 순지출을 전체/카테고리 예산에 반영하고 사용자 데이터 버전을 올려 기존 추천을 무효화한다. 값이 같고 버전도 같으면 변경/버전 증가 없음."
+      },
+      "patch": {
+        "summary": "거래 카테고리·예산 포함 여부 수정",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassificationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "저장 또는 조회 성공"
+          },
+          "401": {
+            "description": "인증 필요"
+          },
+          "404": {
+            "description": "없거나 타 사용자 리소스"
+          },
+          "409": {
+            "description": "VERSION_CONFLICT. 초안 보존 후 명시적 최신 분류 조회"
+          },
+          "422": {
+            "description": "잘못된 분류/포함 여부/버전"
+          }
+        },
+        "description": "성공 시 재조회 가능한 거래를 반환한다. 순지출을 전체/카테고리 예산에 반영하고 사용자 데이터 버전을 올려 기존 추천을 무효화한다. 값이 같고 버전도 같으면 변경/버전 증가 없음. 원문 명세 호환 별칭. 부분 필드 생략은 지원하지 않는다."
+      }
+    },
+    "/transactions/{id}": {
+      "get": {
+        "summary": "본인 거래 상세·최신 분류 조회",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "저장 또는 조회 성공"
+          },
+          "401": {
+            "description": "인증 필요"
+          },
+          "404": {
+            "description": "없거나 타 사용자 리소스"
+          },
+          "409": {
+            "description": "VERSION_CONFLICT. 초안 보존 후 명시적 최신 분류 조회"
+          },
+          "422": {
+            "description": "잘못된 분류/포함 여부/버전"
+          }
+        },
+        "description": "classification_version, classification_updated_at, category, included, original_category, original_included, 원금액·순지출·카드 연결 정보를 반환한다."
+      }
+    },
+    "/budgets/{month}/summary": {
+      "get": {
+        "summary": "거래 분류·취소 반영 월별 예산 현황",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "저장 또는 조회 성공"
+          },
+          "401": {
+            "description": "인증 필요"
+          },
+          "404": {
+            "description": "없거나 타 사용자 리소스"
+          },
+          "409": {
+            "description": "VERSION_CONFLICT. 초안 보존 후 명시적 최신 분류 조회"
+          },
+          "422": {
+            "description": "잘못된 분류/포함 여부/버전"
+          }
+        },
+        "description": "month,totalWon,spentWon,remainingWon,fixedRemainingWon,availableWon,categories[] 반환. 카테고리별 category,limitWon,spentWon,remainingWon. 미설정 카테고리 한도/잔액은null. 포함된 거래의 원금액−취소액만 집계; 실적·혜택과 독립."
+      }
+    },
+    "/fixed-costs": {
+      "get": {
+        "summary": "월별 반복 고정비 발생건·연결 거래·미반영 잔액 조회",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "선택 월 재계산 현황",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixedCostMonth"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요"
+          },
+          "404": {
+            "description": "본인 소유 객체 없음"
+          },
+          "409": {
+            "description": "VERSION_CONFLICT 또는 TRANSACTION_ALREADY_LINKED"
+          },
+          "422": {
+            "description": "필수값/금액/일자 오류, 다른 월 거래, 중지 일정 연결"
+          }
+        },
+        "description": "해당 월 이하의 가장 최근 규칙으로 발생건을 계산한다. 예정일 말일 보정. inactive 잔액0. active 잔액=max(예상액−예산 포함 연결 거래의 순지출,0). 예산 없는 월은 appliedRemainingWon=null."
+      },
+      "post": {
+        "summary": "반복 일정 생성 또는 적용 월부터 수정/중지/재개",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixedCostPlanInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "선택 월 재계산 현황",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixedCostMonth"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요"
+          },
+          "404": {
+            "description": "본인 소유 객체 없음"
+          },
+          "409": {
+            "description": "VERSION_CONFLICT 또는 TRANSACTION_ALREADY_LINKED"
+          },
+          "422": {
+            "description": "필수값/금액/일자 오류, 다른 월 거래, 중지 일정 연결"
+          }
+        },
+        "description": "effectiveMonth 이전 규칙을 보존하며 같은 월 규칙은 교체. 이후에 이미 지정한 변경은 보존. 새 거래 생성/자동결제 없음. 사용자 버전 갱신으로 이전 추천 무효화."
+      }
+    },
+    "/fixed-costs/{id}/months/{month}/links": {
+      "put": {
+        "summary": "월별 발생건에 거래 연결/해제",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixedCostLinkInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "선택 월 재계산 현황",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixedCostMonth"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요"
+          },
+          "404": {
+            "description": "본인 소유 객체 없음"
+          },
+          "409": {
+            "description": "VERSION_CONFLICT 또는 TRANSACTION_ALREADY_LINKED"
+          },
+          "422": {
+            "description": "필수값/금액/일자 오류, 다른 월 거래, 중지 일정 연결"
+          }
+        },
+        "description": "한 거래 한 일정만, 같은 구매 월·같은 사용자만 연결. 여러 거래를 하나의 일정에 연결 가능. 금액/가계부 포함 여부/카드 실적·혜택은 변경하지 않는다. 동일 버전의 이미 같은 연결 상태는 무변경. 취소·분류 변경 때 예약액을 조회 시 재계산."
+      }
+    },
+    "/finance/codef/status": {
+      "get": {
+        "summary": "CODEF 통신 설정 상태(실제 금융 연결 성공 아님)",
+        "description": "앱 인증 필요. 연결 API 구현/저장 키 구성과 공급자 활성 여부를 구분하며 실제 금융 연결 검증을 의미하지 않는다.",
+        "responses": {
+          "200": {
+            "description": "준비 상태",
+            "content": {
+              "application/json": {
+                "example": {
+                  "provider": "CODEF",
+                  "enabled": false,
+                  "environment": "SANDBOX",
+                  "realConnectionVerified": false,
+                  "userConnectionApiReady": false,
+                  "approvalMappingVerified": false,
+                  "automaticSyncEnabled": false,
+                  "connectionApiImplemented": true,
+                  "storageConfigured": true,
+                  "syntheticProvider": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "유효한 앱 세션 필요"
+          }
+        }
+      }
+    },
+    "/finance/connections": {
+      "get": {
+        "summary": "본인 연결 목록",
+        "responses": {
+          "200": {
+            "description": "조회 또는 확정 작업 결과. operation.status가 FAILED일 수도 있음."
+          },
+          "401": {
+            "description": "앱 인증 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          }
+        }
+      },
+      "post": {
+        "summary": "개인카드 ID/PW 연결 생성",
+        "responses": {
+          "200": {
+            "description": "조회 또는 확정 작업 결과. operation.status가 FAILED일 수도 있음."
+          },
+          "401": {
+            "description": "앱 인증 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "202": {
+            "description": "PENDING / UNKNOWN / AUTH_REQUIRED. 성공으로 간주 금지"
+          },
+          "409": {
+            "description": "키·본문·버전·연결 상태 충돌"
+          },
+          "422": {
+            "description": "잘못된 입력 또는 동의 누락"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "loginId",
+                  "password",
+                  "consent",
+                  "consentVersion",
+                  "organization"
+                ],
+                "properties": {
+                  "loginId": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "writeOnly": true
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "maxLength": 256,
+                    "writeOnly": true
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "consentVersion": {
+                    "type": "string",
+                    "const": "FINANCE_LINK_V1"
+                  },
+                  "organization": {
+                    "type": "string",
+                    "pattern": "^[0-9]{4}$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/finance/connections/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "summary": "본인 연결 상태",
+        "responses": {
+          "200": {
+            "description": "조회 또는 확정 작업 결과. operation.status가 FAILED일 수도 있음."
+          },
+          "401": {
+            "description": "앱 인증 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          }
+        }
+      }
+    },
+    "/finance/operations/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "summary": "본인 작업 결과",
+        "responses": {
+          "200": {
+            "description": "조회 또는 확정 작업 결과. operation.status가 FAILED일 수도 있음."
+          },
+          "401": {
+            "description": "앱 인증 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          }
+        }
+      }
+    },
+    "/finance/connections/{id}/reauthorize": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "summary": "본인 연결 ID/PW 재인증",
+        "responses": {
+          "200": {
+            "description": "조회 또는 확정 작업 결과. operation.status가 FAILED일 수도 있음."
+          },
+          "401": {
+            "description": "앱 인증 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "202": {
+            "description": "PENDING / UNKNOWN / AUTH_REQUIRED. 성공으로 간주 금지"
+          },
+          "409": {
+            "description": "키·본문·버전·연결 상태 충돌"
+          },
+          "422": {
+            "description": "잘못된 입력 또는 동의 누락"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "loginId",
+                  "password",
+                  "consent",
+                  "consentVersion",
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "loginId": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "writeOnly": true
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "maxLength": 256,
+                    "writeOnly": true
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "consentVersion": {
+                    "type": "string",
+                    "const": "FINANCE_LINK_V1"
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/finance/connections/{id}/disconnect": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "summary": "본인 연결 해제",
+        "responses": {
+          "200": {
+            "description": "조회 또는 확정 작업 결과. operation.status가 FAILED일 수도 있음."
+          },
+          "401": {
+            "description": "앱 인증 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "202": {
+            "description": "PENDING / UNKNOWN / AUTH_REQUIRED. 성공으로 간주 금지"
+          },
+          "409": {
+            "description": "키·본문·버전·연결 상태 충돌"
+          },
+          "422": {
+            "description": "잘못된 입력 또는 동의 누락"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/finance/connections/{id}/sync": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "summary": "KB/하나 개인카드 승인 기간 조회 및 원장 동기화",
+        "description": "최대31일의 명시적 조회. 자동 페이지/주기 호출 없음. 인증정보 없이 저장된 Connected ID 사용.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "from",
+                  "to",
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "to": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "status를 확인: RUNNING/IMPORTED/PARTIAL/FAILED. HTTP 성공은 동기화 성공과 다름."
+          },
+          "401": {
+            "description": "로그인 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "409": {
+            "description": "키·버전·상태 충돌 또는 재확인 필요"
+          },
+          "422": {
+            "description": "기간·기관·확인 입력 오류"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          }
+        }
+      }
+    },
+    "/finance/sync-runs/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "summary": "본인 동기화 실행 조회",
+        "responses": {
+          "200": {
+            "description": "status를 확인: RUNNING/IMPORTED/PARTIAL/FAILED. HTTP 성공은 동기화 성공과 다름."
+          },
+          "401": {
+            "description": "로그인 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "409": {
+            "description": "키·버전·상태 충돌 또는 재확인 필요"
+          },
+          "422": {
+            "description": "기간·기관·확인 입력 오류"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          }
+        }
+      }
+    },
+    "/finance/connections/{id}/transactions": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "summary": "본인 정규화 거래·할부·출처·보류 이유 조회",
+        "responses": {
+          "200": {
+            "description": "status를 확인: RUNNING/IMPORTED/PARTIAL/FAILED. HTTP 성공은 동기화 성공과 다름."
+          },
+          "401": {
+            "description": "로그인 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "409": {
+            "description": "키·버전·상태 충돌 또는 재확인 필요"
+          },
+          "422": {
+            "description": "기간·기관·확인 입력 오류"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          }
+        }
+      }
+    },
+    "/finance/transactions/{id}/resolve": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "summary": "중복 후보·별도 취소의 명시적 사용자 확인",
+        "description": "LINK_MANUAL은 ledgerId, LINK_CANCELLATION은 approvalId 필수. 반영된 거래 증거는 IGNORE 불가.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "version",
+                  "action"
+                ],
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "LINK_MANUAL",
+                      "IMPORT_SEPARATELY",
+                      "LINK_CANCELLATION",
+                      "IGNORE"
+                    ]
+                  },
+                  "ledgerId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "approvalId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "status를 확인: RUNNING/IMPORTED/PARTIAL/FAILED. HTTP 성공은 동기화 성공과 다름."
+          },
+          "401": {
+            "description": "로그인 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "409": {
+            "description": "키·버전·상태 충돌 또는 재확인 필요"
+          },
+          "422": {
+            "description": "기간·기관·확인 입력 오류"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          }
+        }
+      }
+    },
+    "/finance/connections/{id}/sync-runs": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "summary": "본인 연결의 최근 동기화 작업 20개 조회 (최신순)",
+        "responses": {
+          "200": {
+            "description": "저장된 동기화 작업 배열. RUNNING/IMPORTED/PARTIAL/FAILED."
+          },
+          "401": {
+            "description": "로그인 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "409": {
+            "description": "키·버전·상태 충돌 또는 재확인 필요"
+          },
+          "422": {
+            "description": "기간·기관·확인 입력 오류"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          }
+        },
+        "description": "응답 유실·재로그인 이후 저장된 상태 복구용. 외부 공급자를 다시 호출하지 않는다. HTTP200은 동기화 성공을 뜻하지 않으며 각 status를 확인한다."
+      }
+    },
+    "/finance/connections/{id}/retry": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "summary": "확정 실패한 최초 연결의 인증정보를 새로 입력해 재요청",
+        "responses": {
+          "200": {
+            "description": "조회 또는 확정 작업 결과. operation.status가 FAILED일 수도 있음."
+          },
+          "401": {
+            "description": "앱 인증 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "202": {
+            "description": "PENDING / UNKNOWN / AUTH_REQUIRED. 성공으로 간주 금지"
+          },
+          "409": {
+            "description": "키·본문·버전·연결 상태 충돌"
+          },
+          "422": {
+            "description": "잘못된 입력 또는 동의 누락"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "loginId",
+                  "password",
+                  "consent",
+                  "consentVersion",
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "loginId": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "writeOnly": true
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "maxLength": 256,
+                    "writeOnly": true
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "consentVersion": {
+                    "type": "string",
+                    "const": "FINANCE_LINK_V1"
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "retryFailedConnection",
+        "description": "FAILED, Connected ID 없음, expectedVersion 일치에만 허용. 새 Idempotency-Key와 명시적 동의 필요. UNKNOWN/진행/활성은409. 같은 키/본문은 외부 재전송 없음."
+      }
+    },
+    "/finance/connections/{id}/archive": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "summary": "확정 실패한 로컬 연결 기록을 목록에서 제거",
+        "responses": {
+          "200": {
+            "description": "localRecordDeleted=true, externalDisconnectRequested=false"
+          },
+          "409": {
+            "description": "버전 또는 상태 충돌"
+          },
+          "404": {
+            "description": "사용자 소유 연결 없음"
+          }
+        },
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "archiveFailedConnection",
+        "description": "처음 연결 생성의 확정 FAILED/Connected ID 없음/동기화 없음에만 허용. 외부 해제 요청 없이 soft archive하고 작업 이력을 보존. 같은 기관 신규 생성으로 복원 가능. expectedVersion 충돌409."
+      }
+    },
+    "/finance/codef/authentication-check": {
+      "post": {
+        "summary": "CODEF 키의 OAuth 인증만 명시적으로 확인",
+        "description": "로그인 필요. 토큰/키/공급자 원문을 반환하지 않으며 카드사 로그인이나 금융 계정 생성/조회를 수행하지 않는다. 성공은 금융 연결 성공이 아니다.",
+        "responses": {
+          "200": {
+            "description": "oauthVerified=true, financialInstitutionAuthenticated=false"
+          },
+          "401": {
+            "description": "앱 로그인 필요"
+          },
+          "503": {
+            "description": "고정 오류 코드와 허용된 providerHttpStatus 숫자만 반환"
+          }
+        }
+      }
+    },
+    "/finance/connections/{id}/card-mappings": {
+      "get": {
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "조회 금융 카드 그룹과 같은 카드사의 등록 실제 상품",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "groups(mask/label/sourceKey/version/cardId/mappedName/calculationStatus), targets, connectionVersion, policy"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Not owned or absent connection"
+          }
+        }
+      },
+      "put": {
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinancialCardMappingInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "summary": "직접 확인한 상품 연결/변경/해제. 거래 및 원장 계산 입력을 변경하지 않음",
+        "responses": {
+          "409": {
+            "description": "MAPPING_VERSION_CONFLICT or CONNECTION_CHANGED. Reload; do not auto-resend."
+          },
+          "200": {
+            "description": "Fresh mapping list. Existing same association/version does not increase revision."
+          },
+          "422": {
+            "description": "MAPPING_CONFIRMATION_REQUIRED or CARD_ISSUER_OR_RULE_MISMATCH"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Owned card/group/connection not found"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": "id",
+          "required": true,
+          "in": "path"
+        }
+      ]
+    },
+    "/v1/finance/transactions/{id}/performance-review": {
+      "get": {
+        "summary": "Get effective INCLUDE / EXCLUDE / UNKNOWN with versions, rule source and cancellation receipt dates",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User-owned confirmation/summary; unconfirmed totals remain null"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Review, transaction, mapping or refund version changed"
+          },
+          "422": {
+            "description": "Mapping, confirmation, facts or receipt date invalid"
+          }
+        }
+      },
+      "put": {
+        "summary": "Explicitly confirm performance treatment; never edits ledger, budget or current qualification",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User-owned confirmation/summary; unconfirmed totals remain null"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Review, transaction, mapping or refund version changed"
+          },
+          "422": {
+            "description": "Mapping, confirmation, facts or receipt date invalid"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinancialPerformanceReviewInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cards/{id}/financial-performance": {
+      "get": {
+        "summary": "Month-specific financial contribution and incomplete coverage counts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User-owned confirmation/summary; unconfirmed totals remain null"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Review, transaction, mapping or refund version changed"
+          },
+          "422": {
+            "description": "Mapping, confirmation, facts or receipt date invalid"
+          }
+        }
+      }
+    },
+    "/v1/finance/transactions/{id}/benefit-review": {
+      "get": {
+        "summary": "Read effective transaction benefit review",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored user-owned state / accepted action; unknown values remain null"
+          },
+          "401": {
+            "description": "Session or single-use action rejected"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Evidence / mapping / qualification version conflict"
+          },
+          "422": {
+            "description": "Invalid or unconfirmed facts"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Required external transport is unavailable"
+          }
+        }
+      },
+      "put": {
+        "summary": "Confirm benefit conditions independently of performance and budget",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored user-owned state / accepted action; unknown values remain null"
+          },
+          "401": {
+            "description": "Session or single-use action rejected"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Evidence / mapping / qualification version conflict"
+          },
+          "422": {
+            "description": "Invalid or unconfirmed facts"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Required external transport is unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion",
+                  "expectedTransactionVersion",
+                  "expectedMappingVersion",
+                  "decision",
+                  "area",
+                  "conditionsConfirmed"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer"
+                  },
+                  "expectedTransactionVersion": {
+                    "type": "integer"
+                  },
+                  "expectedMappingVersion": {
+                    "type": "integer"
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "RULE",
+                      "EXCLUDE",
+                      "UNKNOWN"
+                    ]
+                  },
+                  "area": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "conditionsConfirmed": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cards/{id}/financial-benefits": {
+      "get": {
+        "summary": "Estimated original-purchase-month benefit usage/caps; official cap remains unknown",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored user-owned state / accepted action; unknown values remain null"
+          },
+          "401": {
+            "description": "Session or single-use action rejected"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Evidence / mapping / qualification version conflict"
+          },
+          "422": {
+            "description": "Invalid or unconfirmed facts"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Required external transport is unavailable"
+          }
+        }
+      },
+      "put": {
+        "summary": "Confirm current qualification tier and data coverage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored user-owned state / accepted action; unknown values remain null"
+          },
+          "401": {
+            "description": "Session or single-use action rejected"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Evidence / mapping / qualification version conflict"
+          },
+          "422": {
+            "description": "Invalid or unconfirmed facts"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Required external transport is unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion",
+                  "expectedQualificationVersion",
+                  "tier",
+                  "coverageConfirmed"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer"
+                  },
+                  "expectedQualificationVersion": {
+                    "type": "integer"
+                  },
+                  "tier": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 3
+                  },
+                  "coverageConfirmed": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/email-verification": {
+      "get": {
+        "summary": "Email ownership status and mail readiness",
+        "parameters": [],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored user-owned state / accepted action; unknown values remain null"
+          },
+          "401": {
+            "description": "Session or single-use action rejected"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Evidence / mapping / qualification version conflict"
+          },
+          "422": {
+            "description": "Invalid or unconfirmed facts"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Required external transport is unavailable"
+          }
+        }
+      }
+    },
+    "/v1/me/email-verification/request": {
+      "post": {
+        "summary": "Deliver single-use code to account mailbox; no code in response",
+        "parameters": [],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored user-owned state / accepted action; unknown values remain null"
+          },
+          "401": {
+            "description": "Session or single-use action rejected"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Evidence / mapping / qualification version conflict"
+          },
+          "422": {
+            "description": "Invalid or unconfirmed facts"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Required external transport is unavailable"
+          }
+        }
+      }
+    },
+    "/v1/me/email-verification/confirm": {
+      "post": {
+        "summary": "Confirm owner email",
+        "parameters": [],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored user-owned state / accepted action; unknown values remain null"
+          },
+          "401": {
+            "description": "Session or single-use action rejected"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Evidence / mapping / qualification version conflict"
+          },
+          "422": {
+            "description": "Invalid or unconfirmed facts"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Required external transport is unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/password-reset/request": {
+      "post": {
+        "summary": "Accept reset request without revealing email existence",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Stored user-owned state / accepted action; unknown values remain null"
+          },
+          "401": {
+            "description": "Session or single-use action rejected"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Evidence / mapping / qualification version conflict"
+          },
+          "422": {
+            "description": "Invalid or unconfirmed facts"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Required external transport is unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/password-reset/confirm": {
+      "post": {
+        "summary": "Consume code and revoke all sessions while preserving data",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Stored user-owned state / accepted action; unknown values remain null"
+          },
+          "401": {
+            "description": "Session or single-use action rejected"
+          },
+          "404": {
+            "description": "Owned resource not found"
+          },
+          "409": {
+            "description": "Evidence / mapping / qualification version conflict"
+          },
+          "422": {
+            "description": "Invalid or unconfirmed facts"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Required external transport is unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "newPassword"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 128
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Credentials": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "Card": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^\\[가상\\]"
+          },
+          "rateBp": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "qualified": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "performanceWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "targetWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "remainingCapWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "performanceEligible": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "const": "SYNTHETIC"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "rateBp",
+          "qualified",
+          "performanceWon",
+          "targetWon",
+          "remainingCapWon",
+          "performanceEligible",
+          "source"
+        ]
+      },
+      "Budget": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "totalWon": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000000
+          },
+          "categories": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000000
+            },
+            "description": "SHOPPING/FOOD/TRANSPORT/HOUSING/HEALTH/LEISURE/OTHER. 기존 비표준 키 보존 가능. 전체 맵 교체. 키 생략은 미설정, 명시적 0은 0원 한도. 합은 totalWon 이하."
+          },
+          "fixedRemainingWon": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000000
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "화면에서 조회한 버전 그대로 저장. 신규 월은 0. 누락/null 불가."
+          },
+          "fixedCostMode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "MANUAL",
+              "SCHEDULED",
+              null
+            ],
+            "description": "월별 예약 계산 기준. 생략/null은 기존 기준 유지(새 월은 MANUAL). fixedRemainingWon은 보존된 수동값이며 SCHEDULED에서는 계산에 사용하지 않음."
+          }
+        },
+        "required": [
+          "totalWon",
+          "categories",
+          "fixedRemainingWon",
+          "version"
+        ],
+        "description": "모든 금액과 버전은 정수. 소수 금액 절삭 허용 안 함. 미반영 고정비는 전체 예산을 초과할 수 있으며 여유 금액을 음수로 표시."
+      },
+      "Entry": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amountWon": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000000
+          },
+          "purchasedAt": {
+            "type": "string",
+            "format": "date"
+          },
+          "category": {
+            "type": "string"
+          },
+          "included": {
+            "type": "boolean"
+          },
+          "cardId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "본인 소유 카드. 예산 포함 여부와 실적 인정 여부는 독립적입니다."
+          },
+          "cardChargeWon": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000,
+            "description": "포인트·유상머니를 제외한 카드 승인액. amountWon(예산 지출액) 이하."
+          }
+        },
+        "required": [
+          "clientId",
+          "amountWon",
+          "purchasedAt",
+          "category",
+          "included",
+          "cardId",
+          "cardChargeWon"
+        ]
+      },
+      "Cancel": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amountWon": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "cardRefundWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "카드 환불액. 순수 카드 거래는 생략 시 취소액과 동일. 혼합 결제는 명시 필수."
+          }
+        },
+        "required": [
+          "clientId",
+          "amountWon"
+        ]
+      },
+      "Checkout": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "orderValueWon": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "pointUsedWon": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "prepaidMoneyUsedWon": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cardChargeWon": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "category": {
+            "type": "string"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "installments": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "splitApproval": {
+            "type": "string"
+          },
+          "confirmedByUser": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "orderValueWon",
+          "pointUsedWon",
+          "prepaidMoneyUsedWon",
+          "cardChargeWon",
+          "category",
+          "paymentMethod",
+          "installments",
+          "splitApproval",
+          "confirmedByUser"
+        ]
+      },
+      "CheckoutUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "context": {
+            "$ref": "#/components/schemas/Checkout"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "context"
+        ]
+      },
+      "RecommendationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "checkoutId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snapshotVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mode": {
+            "enum": [
+              "BENEFIT",
+              "PERFORMANCE",
+              "BALANCED"
+            ]
+          },
+          "maxOpportunityCostWon": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "checkoutId",
+          "snapshotVersion",
+          "mode",
+          "maxOpportunityCostWon"
+        ]
+      },
+      "MonthState": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "untrackedPerformanceWon",
+          "currentQualified",
+          "remainingCapWon",
+          "version"
+        ],
+        "properties": {
+          "untrackedPerformanceWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "해당 월에 원장으로 기록하지 않은 기존 실적만 입력. 원장 거래와 중복 금지.",
+            "maximum": 100000000
+          },
+          "currentQualified": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "전월 등 기준 기간으로 판단한 이번 달 자격의 가상 스냅샷. 이번 달 지출로 자동 승격하지 않음."
+          },
+          "remainingCapWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "연결 거래 차감 전 기준 한도. GET performance의 baseRemainingCapWon을 보존해 전송. 계산된 remainingCapWon을 입력하면 중복 차감되므로 금지."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "untrackedSource": {
+            "type": "string",
+            "enum": [
+              "USER_INPUT",
+              "USER_ESTIMATE",
+              "UNKNOWN"
+            ],
+            "description": "값이 null이면 UNKNOWN; 알려진 값이면 사용자 확인/추정 출처와 확인일 필수."
+          },
+          "qualificationSource": {
+            "type": "string",
+            "enum": [
+              "USER_INPUT",
+              "USER_ESTIMATE",
+              "UNKNOWN"
+            ],
+            "description": "값이 null이면 UNKNOWN; 알려진 값이면 사용자 확인/추정 출처와 확인일 필수."
+          },
+          "untrackedAsOf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "미확인은 null. 미래일 금지. 실적은 집계 월 내, 자격은 직전 기준 월~적용 월 말일."
+          },
+          "qualificationAsOf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "미확인은 null. 미래일 금지. 실적은 집계 월 내, 자격은 직전 기준 월~적용 월 말일."
+          },
+          "qualificationPeriod": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}$",
+            "description": "SYNTHETIC_V1은 적용 월 직전 월이어야 한다."
+          }
+        },
+        "description": "월별 전체 상태 교체. 신규 수동 입력은 출처·확인일·기준 월을 모두 전송한다. 메타데이터 5필드 전체 생략은 기존 가상 fixture 호환용이며 공식 조회값이 아니다. version은 필수, 충돌409 시 초안을 보존하고 GET으로 최신 버전을 명시적으로 확인한다."
+      },
+      "LinkCard": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cardId",
+          "cardChargeWon"
+        ],
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cardChargeWon": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000
+          }
+        }
+      },
+      "CardPerformance": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "performanceMonth": {
+            "type": "string"
+          },
+          "qualificationPeriod": {
+            "type": "string"
+          },
+          "nextBenefitMonth": {
+            "type": "string"
+          },
+          "performanceSource": {
+            "type": "string"
+          },
+          "currentQualificationSource": {
+            "type": "string",
+            "enum": [
+              "UNKNOWN",
+              "SYNTHETIC",
+              "USER_INPUT",
+              "USER_ESTIMATE"
+            ]
+          },
+          "cancellationPolicy": {
+            "type": "string"
+          },
+          "untrackedPerformanceWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "ledgerPerformanceWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "performanceWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "targetWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "gapWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "remainingCapWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "기준 한도에서 연결 거래 혜택을 차감한 계산 결과. 월별 기준값으로 되써서 재차 차감하지 않는다."
+          },
+          "currentQualified": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "nextMonthThresholdMet": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "stateVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "baseRemainingCapWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "연결 거래 차감 전 기준 한도. 월별 PUT 입력 시 이 값을 보존해야 한다."
+          },
+          "ledgerBenefitUsedWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "연결 거래의 가상 추정 혜택 사용액. 미기록 거래를 포함하는 월 전체 사용액이 아니다."
+          },
+          "benefitSource": {
+            "type": "string",
+            "enum": [
+              "UNKNOWN",
+              "SYNTHETIC_ESTIMATE"
+            ]
+          },
+          "benefitRuleVersion": {
+            "type": "string",
+            "enum": [
+              "SYNTHETIC_BENEFIT_V1"
+            ]
+          },
+          "untrackedSource": {
+            "type": "string",
+            "enum": [
+              "UNKNOWN",
+              "SYNTHETIC",
+              "USER_INPUT",
+              "USER_ESTIMATE"
+            ]
+          },
+          "untrackedAsOf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "qualificationAsOf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "performanceMonth",
+          "qualificationPeriod",
+          "nextBenefitMonth",
+          "performanceSource",
+          "currentQualificationSource",
+          "cancellationPolicy",
+          "untrackedPerformanceWon",
+          "ledgerPerformanceWon",
+          "performanceWon",
+          "targetWon",
+          "gapWon",
+          "remainingCapWon",
+          "currentQualified",
+          "nextMonthThresholdMet",
+          "stateVersion"
+        ]
+      },
+      "ClassificationInput": {
+        "type": "object",
+        "required": [
+          "category",
+          "included",
+          "version"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "SHOPPING/FOOD/TRANSPORT/HOUSING/HEALTH/LEISURE/OTHER. 기존 비표준 분류는 그대로 유지하며 포함 여부만 수정할 수 있다."
+          },
+          "included": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "description": "금액·원구매일·카드·혜택 규칙은 변경하지 않는다. 분류 전용 버전이며 취소/카드 연결 버전과 독립적이다."
+      },
+      "FixedCostPlanInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "amountWon",
+          "category",
+          "dayOfMonth",
+          "effectiveMonth",
+          "active",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "생성 시 클라이언트 UUID. 수정 시 같은 ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "amountWon": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000000
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "SHOPPING",
+              "FOOD",
+              "TRANSPORT",
+              "HOUSING",
+              "HEALTH",
+              "LEISURE",
+              "OTHER"
+            ]
+          },
+          "dayOfMonth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31
+          },
+          "effectiveMonth": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}$"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "신규0. 수정은 조회한 일정 버전."
+          }
+        }
+      },
+      "FixedCostLinkInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "transactionId",
+          "linked",
+          "version"
+        ],
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "linked": {
+            "type": "boolean",
+            "description": "true 연결 / false 해제. 한 거래는 한 일정의 같은 구매 월에만 연결."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "조회한 일정 버전. 일정/거래 연결 변경 모두 증가."
+          }
+        }
+      },
+      "FixedCostPayment": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "netWon": {
+            "type": "integer"
+          },
+          "included": {
+            "type": "boolean"
+          },
+          "category": {
+            "type": "string"
+          }
+        }
+      },
+      "FixedCostOccurrence": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "amountWon": {
+            "type": "integer"
+          },
+          "category": {
+            "type": "string"
+          },
+          "dayOfMonth": {
+            "type": "integer"
+          },
+          "effectiveMonth": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "linkedNetWon": {
+            "type": "integer"
+          },
+          "includedNetWon": {
+            "type": "integer"
+          },
+          "remainingWon": {
+            "type": "integer"
+          },
+          "payments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FixedCostPayment"
+            }
+          }
+        }
+      },
+      "FixedCostMonth": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "UNSET",
+              "MANUAL",
+              "SCHEDULED"
+            ]
+          },
+          "manualRemainingWon": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "scheduledRemainingWon": {
+            "type": "integer"
+          },
+          "appliedRemainingWon": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FixedCostOccurrence"
+            }
+          }
+        }
+      },
+      "FinancialCardMappingInput": {
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "description": "Owned registered actual card; null unlinks only the association.",
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "expectedConnectionVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "sourceKey": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "sourceKey",
+          "expectedVersion",
+          "expectedConnectionVersion",
+          "confirmed"
+        ]
+      },
+      "FinancialPerformanceReviewInput": {
+        "type": "object",
+        "required": [
+          "expectedVersion",
+          "expectedTransactionVersion",
+          "expectedMappingVersion",
+          "decision",
+          "confirmed",
+          "refunds"
+        ],
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedTransactionVersion": {
+            "type": "integer"
+          },
+          "expectedMappingVersion": {
+            "type": "integer"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "INCLUDE",
+              "EXCLUDE",
+              "UNKNOWN"
+            ]
+          },
+          "confirmed": {
+            "type": "boolean",
+            "const": true
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "cancellationId",
+                "receiptDate"
+              ],
+              "properties": {
+                "cancellationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "receiptDate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-finance-provider-diagnostics": {
+    "locations": [
+      "financial connection response",
+      "financial operation response"
+    ],
+    "field": "provider_code",
+    "privacy": "No provider message, extraMessage, request credentials, or raw response is retained.",
+    "pattern": "^CF-[0-9]{5}$",
+    "nullable": true
+  },
+  "x-financial-performance": {
+    "reviewValidity": [
+      "owner",
+      "card mapping version",
+      "rule version",
+      "approval fingerprint",
+      "refund evidence signature"
+    ],
+    "summaryFields": [
+      "amountWon (nullable)",
+      "confirmedSubtotalWon",
+      "includedCount",
+      "excludedCount",
+      "unknownCount",
+      "unknownRefundDateCount",
+      "hasEvidence"
+    ],
+    "receiptPolicy": "KB cancellation slip receipt month, user-confirmed per applied cancellation. Import date is never receipt date. Unverified product refund policies remain unknown.",
+    "source": "USER_CONFIRMED_TERMS_ESTIMATE; not an official issuer performance query",
+    "budget": "financial review changes neither spending nor budget inclusion",
+    "currentQualification": "separate existing card-month snapshot; never promoted by current spending",
+    "baseline": "untracked amount must be explicitly known for total performance; null is not zero"
+  },
+  "x-financial-benefit-boundary": {
+    "source": "USER_CONFIRMED_TERMS_ESTIMATE",
+    "officialRemainingCapWon": null,
+    "rounding": "KB unknown rounding/tie outcomes use lower/upper bounds; no invented exact value",
+    "cancellations": "Estimated original month recalculation, not a guarantee of immediate issuer cap restoration",
+    "guard": "Coverage, evidence and qualification version must be current; future qualification does not modify current benefits"
+  }
+}

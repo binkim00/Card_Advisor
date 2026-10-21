@@ -1,0 +1,5 @@
+# Copy to .local/openai.properties. Keep the API key only in a separate local file.
+# Enable only after choosing a model and a paid-usage budget.
+enabled=false
+model=
+apiKeyFile=C:/Users/SSAFY/Documents/card-advisor/.local/openai-api-key.txt

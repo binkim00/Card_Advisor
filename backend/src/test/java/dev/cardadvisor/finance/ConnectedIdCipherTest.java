@@ -1,0 +1,13 @@
+package dev.cardadvisor.finance;
+import dev.cardadvisor.api.ApiError;
+import org.junit.jupiter.api.Test;
+import java.security.SecureRandom;
+import java.util.*;
+import static org.junit.jupiter.api.Assertions.*;
+class ConnectedIdCipherTest {
+ static Properties properties(){var p=new Properties();byte[] key=new byte[32];new SecureRandom().nextBytes(key);p.setProperty("activeKeyId","k1");p.setProperty("keys.k1",Base64.getEncoder().encodeToString(key));return p;}
+ @Test void missingAndInvalidKeysFailClosed(){var c=new ConnectedIdCipher(new Properties());assertFalse(c.configured());assertThrows(ApiError.class,c::requireConfigured);var p=properties();p.setProperty("keys.k1","invalid");assertThrows(ApiError.class,()->new ConnectedIdCipher(p));}
+ @Test void randomizedEncryptionBindsOwnerConnectionAndContext(){var c=new ConnectedIdCipher(properties());UUID user=UUID.randomUUID(),connection=UUID.randomUUID();var one=c.encrypt("synthetic-cid",user,connection,"SANDBOX","scope","9999");var two=c.encrypt("synthetic-cid",user,connection,"SANDBOX","scope","9999");assertFalse(Arrays.equals(one.ciphertext(),two.ciphertext()));assertEquals("synthetic-cid",c.decrypt(one,user,connection,"SANDBOX","scope","9999"));assertThrows(ApiError.class,()->c.decrypt(one,UUID.randomUUID(),connection,"SANDBOX","scope","9999"));assertThrows(ApiError.class,()->c.decrypt(one,user,UUID.randomUUID(),"SANDBOX","scope","9999"));assertThrows(ApiError.class,()->c.decrypt(one,user,connection,"DEMO","scope","9999"));one.ciphertext()[0]^=1;assertThrows(ApiError.class,()->c.decrypt(one,user,connection,"SANDBOX","scope","9999"));}
+ @Test void oldKeyCanBeRetainedDuringRotation(){var p=properties();var c=new ConnectedIdCipher(p);UUID user=UUID.randomUUID(),id=UUID.randomUUID();var old=c.encrypt("synthetic-cid",user,id,"SANDBOX","scope","9999");p.setProperty("keys.k2",properties().getProperty("keys.k1"));p.setProperty("activeKeyId","k2");var rotated=new ConnectedIdCipher(p);assertEquals("synthetic-cid",rotated.decrypt(old,user,id,"SANDBOX","scope","9999"));assertEquals("k2",rotated.encrypt("synthetic-cid",user,id,"SANDBOX","scope","9999").keyId());p.remove("keys.k1");assertThrows(ApiError.class,()->new ConnectedIdCipher(p).decrypt(old,user,id,"SANDBOX","scope","9999"));}
+ @Test void requestFingerprintDoesNotStorePlaintextAndChangesWithBody(){var c=new ConnectedIdCipher(properties());byte[] a=c.fingerprint("k1","synthetic-password".getBytes()),b=c.fingerprint("k1","synthetic-password".getBytes()),d=c.fingerprint("k1","changed-password".getBytes());assertArrayEquals(a,b);assertFalse(Arrays.equals(a,d));assertEquals(32,a.length);assertFalse(c.toString().contains("keys"));}
+}

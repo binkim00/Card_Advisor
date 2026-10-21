@@ -1,0 +1,4 @@
+-- Keep the already-applied V10 intact. Defer cross-cascade checks until user deletion completes.
+ALTER TABLE financial_transactions ALTER CONSTRAINT financial_transactions_user_id_ledger_id_fkey DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE financial_transactions ALTER CONSTRAINT financial_transactions_user_id_last_run_id_fkey DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE financial_transactions ALTER CONSTRAINT financial_transactions_user_id_linked_transaction_id_fkey DEFERRABLE INITIALLY DEFERRED;
