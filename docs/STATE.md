@@ -526,5 +526,13 @@ Notion FR-01~FR-24를 Android 앱·백엔드·PostgreSQL·외부 연동·테스�
 - Docker가 다시 Inference 런타임 엔드포인트 오류로 기동 실패. Docker 프로세스 경로 검증 후 run 폴더만 같은 부모의 run.quarantine-*로 보존 격리했으나 재시작 오류 지속. 컨테이너 디스크/DB볼륨/개인자료는 변경하지 않았다. 기존 Docker DB와 정상18080 API는 미복구.
 - Docker 복구와 독립적으로 공식 EDB PG17.6 바이너리를 .tools에 준비하고, .local/checkout-pg-* 신규 합성 클러스터만 loopback54330에 실행. 비밀 설정 .local/checkout-pg.properties, 원 Docker DB/개인 계정과 분리. 새로운 클러스터에 Flyway V1~V22 적용. 실제 금융·AI·메일 외부 호출0. 휴대폰/실쇼핑 주문서 검증·APK 설치는 이번에 수행하지 않음.
 
+## 2026-10-21 지연 응답·수동 구매 독립 확인 최종 검증
+- 합성 전용 HTTP 필터가 세 번째 추천 응답을800ms 지연. 주문서 소스를 먼저 폐기한 뒤 늦은 결과가 화면에 나타나지 않음을 확인. 네이버/무신사 merchant와 DIRECT_CARD/NAVER_PAY_CARD 전송값을 PostgreSQL에서 대조했다. 실제 쇼핑몰 화면을 조작한 검증은 아니다.
+- 비교 화면의 확인 상태를 수동 구매가 재사용하던 경로를 분리. 실제 카드 수동 구매에는 독립 확인란을 표시하고, 금액/카드 변경 시 해제하며 확인 전 저장 버튼 비활성. 추천 소스가 폐기돼도 사용자가 구매 조건을 직접 확인하면 수동 기록 가능. 가상 카드 기존 동작 유지.
+- 최종 CheckoutRecommendationFlowTest/AndroidCheckoutRecommendationPostgresTest 통과(.run/checkout-final-confirmation-pg.log): 추천3건/추천만 조회한 시점 원장0건 → 별도 수동 확인 후20,000원 구매1건/예산20,000원. 자동 구매 없음, 검증계정삭제. 테스트의 조회중 버튼 클릭 타이밍을 활성 상태 대기로 바로잡은 뒤 재검증했다.
+- 기존 LedgerDeviceFlowTest/AndroidLedgerDevicePostgresTest 에뮬레이터 회귀1개 통과(.run/checkout-final-regression-pg.log의 ledger 클래스, ledger-device-emulator-5554.json). 수동구매/부분·전체취소/가상혜택·실적·예산/금융상품연결/합성금융취소·실적·혜택/추천 유지. 기존12표 불변/합성계정삭제. physicalDevice=false, 개인 휴대폰 검증으로 주장하지 않음.
+- JVM 관련15개·debug/androidTest/release 빌드 성공(.run/checkout-manual-separation-build.log), release는 미서명·기본 API주소 미설정 상태이며 배포 완료가 아니다. 실폰 설치 미수행. 실제 CODEF·AI·메일 호출0, 기존 Docker DB/개인 로그인·거래 변경 없음.
+- 현재 기능 수정은 로컬 Git에 검증 후 단계별 커밋. 기존 정상 API18080은 Docker 오류로 미복구. 전체 서비스 완성/실제 쇼핑 추천 성공/공개 배포로 확대하지 않는다. 다음 단계는 원 실행환경 복구.
+
 ## 다음 행동 1개
-합성 지연 응답을 이용해 추천 요청 중 주문서가 변경·폐기되면 늦은 결과가 다시 표시되지 않는지 검증한다.
+기존 Docker DB 디스크와 개인 자료를 보존하면서 Docker 시작 오류를 복구하고 정상 API18080을 재가동한다.

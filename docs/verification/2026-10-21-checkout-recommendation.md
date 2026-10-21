@@ -23,3 +23,10 @@
 2. 로컬에만 있는 `.local/checkout-pg.properties`에서 DB_URL/DB_USER/DB_PASSWORD를 현재 프로세스 환경으로 읽는다. 값은 출력하거나 채팅에 붙이지 않는다. 격리 DB가 정지돼 있으면 같은 파일의 PG_BIN/PG_DATA를 사용해 pg_ctl start로 실행한다.
 3. backend에서 RUN_CHECKOUT_ANDROID_PG_TEST=true, ANDROID_TEST_DEVICE=emulator-5554 후 Maven `-Dtest=AndroidCheckoutRecommendationPostgresTest test` 실행. 테스트가 USB reverse→별도 임시 API 포트 연결 및 종료 시 reverse 제거/합성계정 삭제를 담당한다.
 4. 실제 기기에 이 테스트를 실행할 경우 현재 검증 호스트가 앱 프로세스를 종료할 수 있으므로 기존 개인 세션 보존 검증을 먼저 준비해야 한다. 현재 근거는 에뮬레이터만 해당한다.
+
+## 최종 추가 회귀
+- `.run/checkout-late-response-pg.log`: 합성 세 번째 응답800ms 지연 + 소스폐기 후 UI늦은결과 미표시, 네이버/무신사 문맥 대조 통과.
+- 최종 `.run/checkout-final-confirmation-pg.log`: 위 흐름과 독립 수동 구매 확인까지1개 통과. 추천3건(승인50000/49000/48000)과 추천 조회 후 원장0건을 확인한 다음, 명시적 수동 입력·확인으로 구매20000원1건 저장/예산반영. 실제 카드 수동 기록의 확인 상태가 이전 추천에 종속되지 않도록 수정했다.
+- 실제 카드 수동 구매는 별도 확인 전 비활성, 금액/카드 변경 시 확인 해제. 가상 카드 동작 유지. 최종 `.run/checkout-final-regression-pg.log`의 AndroidLedgerDevicePostgresTest1개는 emulator-5554에서 기존 구매/부분·전체취소/예산/실적/혜택/금융 연결·동기화 회귀를 통과했다. 해당 조합 로그의 새 checkout 테스트는 버튼 조회대기 타이밍 문제로 실패했고 테스트 동기를 수정한 뒤 별도 최종 확인 로그에서 통과했다.
+- 모든 검증계정 삭제/기존 자료 불변. `.run/checkout-final-proof.json`은 원문/금액이 없는 최종 요약 메타데이터이며, 상세 합성 금액은 본 문서의 재현 조건이다. 실제 개인 거래·실제 기기·공급자 호출·배포 검증이 아니다.
+- 최종 debug/androidTest/release 빌드 통과. 기존 Docker 시작 오류는 여전히 미복구이며 격리 PG54330을 사용하는 테스트 서버는 테스트 종료 후 닫힌다. 기본 API18080 재가동은 다음 행동이다.

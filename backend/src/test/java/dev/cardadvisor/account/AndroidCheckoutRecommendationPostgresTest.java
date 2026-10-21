@@ -15,6 +15,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"codef.config-file=","codef.storage-key-file=","openai.config-file=","account.mail-config-file="})
 @EnabledIfEnvironmentVariable(named="RUN_CHECKOUT_ANDROID_PG_TEST",matches="true")
 class AndroidCheckoutRecommendationPostgresTest {
+ @org.springframework.boot.test.context.TestConfiguration static class DelayedResponse {
+  @org.springframework.context.annotation.Bean java.util.concurrent.atomic.AtomicInteger recommendationCalls(){return new java.util.concurrent.atomic.AtomicInteger();}
+  @org.springframework.context.annotation.Bean jakarta.servlet.Filter syntheticResponseDelay(java.util.concurrent.atomic.AtomicInteger calls){return (request,response,chain)->{
+   if(request instanceof jakarta.servlet.http.HttpServletRequest http&&"POST".equals(http.getMethod())&&http.getRequestURI().equals("/v1/recommendations")&&calls.incrementAndGet()==3){try{Thread.sleep(800);}catch(InterruptedException e){Thread.currentThread().interrupt();throw new jakarta.servlet.ServletException("Synthetic delay interrupted");}}
+   chain.doFilter(request,response);
+  };}
+ }
+ @Autowired java.util.concurrent.atomic.AtomicInteger recommendationCalls;
  @LocalServerPort int port;@Autowired JdbcTemplate db;@Autowired ObjectMapper json;
  final String device=System.getenv().getOrDefault("ANDROID_TEST_DEVICE","emulator-5554");
  String adb(String...args)throws Exception{
@@ -31,11 +39,11 @@ class AndroidCheckoutRecommendationPostgresTest {
    assertTrue(out.contains("OK (1 test)"),"Checkout confirmation flow failed; raw output withheld");
    UUID user=db.queryForObject("SELECT id FROM app_users WHERE email=?",UUID.class,email);
    var rows=db.queryForList("SELECT c.payload::text AS checkout,r.payload::text AS result FROM recommendations r JOIN checkouts c ON c.id=r.checkout_id AND c.user_id=r.user_id WHERE r.user_id=? ORDER BY (c.payload->>'pointUsedWon')::bigint",user);
-   assertEquals(2,rows.size());for(int i=0;i<2;i++){
+   assertEquals(3,recommendationCalls.get());assertEquals(3,rows.size());for(int i=0;i<3;i++){
     var c=json.readTree((String)rows.get(i).get("checkout"));var result=json.readTree((String)rows.get(i).get("result"));
-    assertEquals(62000,c.get("orderValueWon").asInt());assertEquals(2000+i*1000,c.get("pointUsedWon").asInt());assertEquals(10000,c.get("prepaidMoneyUsedWon").asInt());assertEquals(50000-i*1000,c.get("cardChargeWon").asInt());assertEquals(i==0?"DIRECT_CARD":"NAVER_PAY_CARD",c.get("paymentMethod").asText());assertEquals("NAVER_PLUS_STORE",c.get("purchaseFacts").get("merchant").asText());assertEquals(60000-i*1000,result.get("expenseWon").asInt());assertFalse(result.get("recommendedCardId").isNull());
+    assertEquals(62000,c.get("orderValueWon").asInt());assertEquals(2000+i*1000,c.get("pointUsedWon").asInt());assertEquals(10000,c.get("prepaidMoneyUsedWon").asInt());assertEquals(50000-i*1000,c.get("cardChargeWon").asInt());assertEquals(i==1?"NAVER_PAY_CARD":"DIRECT_CARD",c.get("paymentMethod").asText());assertEquals(i==2?"MUSINSA":"NAVER_PLUS_STORE",c.get("purchaseFacts").get("merchant").asText());assertEquals(60000-i*1000,result.get("expenseWon").asInt());assertFalse(result.get("recommendedCardId").isNull());
    }
-   assertEquals(0L,db.queryForObject("SELECT count(*) FROM ledger_entries WHERE user_id=?",Long.class,user));report.put("recommendations",2);report.put("ledgerRows",0);report.put("passed",true);
+   assertEquals(1L,db.queryForObject("SELECT count(*) FROM ledger_entries WHERE user_id=? AND amount_won=20000 AND card_charge_won=20000 AND purchase_facts->>'confirmed'='true'",Long.class,user));report.put("recommendations",3);report.put("lateResponseDiscardedByUi",true);report.put("bothMerchantRoutes",true);report.put("ledgerRowsBeforeExplicitPurchase",0);report.put("ledgerRows",1);report.put("manualPurchaseConfirmedSeparately",true);report.put("passed",true);
   }finally{
    db.update("DELETE FROM app_users WHERE email=?",email);report.put("syntheticAccountRemoved",db.queryForObject("SELECT count(*) FROM app_users WHERE email=?",Long.class,email)==0);adb("reverse","--remove","tcp:18080");
    Files.createDirectories(Path.of("../.run"));Files.writeString(Path.of("../.run/checkout-recommendation-flow.json"),json.writerWithDefaultPrettyPrinter().writeValueAsString(report));

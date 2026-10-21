@@ -79,6 +79,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
  fun purchaseFacts()=JSONObject().put("merchant",merchant).put("purchaseKind",if(ordinaryGoods)"GENERAL_GOODS" else "GIFT_CARD").put("confirmed",factsConfirmed)
  var checkoutExpanded by remember{mutableStateOf(false)}
  var manualExpanded by remember{mutableStateOf(false)}
+ var manualFactsConfirmed by remember{mutableStateOf(false)}
  var statsExpanded by remember{mutableStateOf(false)}
  var detailId by remember{mutableStateOf<String?>(null)}
  var ledgerFilter by remember{mutableStateOf("ALL")}
@@ -225,21 +226,25 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
     2->{
      LedgerOverview(budgetSummary,month)
      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-      TextButton(enabled=!busy,onClick={manualExpanded=!manualExpanded}){Text(if(manualExpanded)"수동 입력 접기" else "+ 수동 구매 기록")}
+      TextButton(enabled=!busy,onClick={manualExpanded=!manualExpanded;manualFactsConfirmed=false}){Text(if(manualExpanded)"수동 입력 접기" else "+ 수동 구매 기록")}
       TextButton(enabled=!busy,onClick={runTask{invalidate();refreshLedger();message="내역을 조회했습니다."}}){Text("새로고침")}
      }
      if(manualExpanded) DesignPanel {
      Text("수동 구매 기록",style=MaterialTheme.typography.titleLarge)
-     PaymentFields(order,points,money,{order=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{points=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{money=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()})
+     PaymentFields(order,points,money,{order=it;factsConfirmed=false;manualFactsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{points=it;factsConfirmed=false;manualFactsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{money=it;factsConfirmed=false;manualFactsConfirmed=false;confirmedDetectionGeneration=null;invalidate()})
      Text("실제로 사용한 카드를 선택해 주세요. 추천 조회는 실적에 반영되지 않습니다.")
      for(i in 0 until cardStates.length()){val c=cardStates.getJSONObject(i)
       if(c.optString("benefitRuleVersion").startsWith("OFFICIAL_")!=actualMode)continue
-      FilterChip(selected=selectedCardId==c.getString("id"),onClick={selectedCardId=c.getString("id")},enabled=!busy,label={Text(c.getString("name")+" 사용")})
+      FilterChip(selected=selectedCardId==c.getString("id"),onClick={selectedCardId=c.getString("id");manualFactsConfirmed=false},enabled=!busy,label={Text(c.getString("name")+" 사용")})
 
+     }
+     if(actualMode){
+      Text("수동 기록 조건 · "+(if(merchant=="NAVER_PLUS_STORE")"네이버플러스 스토어" else "무신사")+" · "+(if(ordinaryGoods)"일반 상품" else "상품권·충전 등 제외 상품"))
+      Row{Checkbox(manualFactsConfirmed,{manualFactsConfirmed=it},modifier=Modifier.testTag("manualFactsConfirmed"));Text("입력한 금액과 위 구매 조건·국내 원화·일시불·단일 카드 승인을 직접 확인했습니다.")}
      }
      Text("포인트를 제외한 지출을 기록합니다. 실제 결제는 실행하지 않습니다.")
      Row{
-      Button(enabled=!busy&&selectedCardId!=null,onClick={runTask{api.request("/v1/transactions/manual","POST",JSONObject().put("clientId",UUID.randomUUID().toString()).put("amountWon",order.toLong()-points.toLong()).put("cardChargeWon",order.toLong()-points.toLong()-money.toLong()).put("cardId",selectedCardId).put("purchasedAt",LocalDate.now(ZoneId.of("Asia/Seoul")).toString()).put("category","SHOPPING").put("included",true).apply{if(actualMode)put("purchaseFacts",purchaseFacts())});invalidate();refreshLedger();manualExpanded=false;message="수동 구매 기록을 추가했습니다."}}){Text("구매 기록 추가")}
+      Button(enabled=!busy&&selectedCardId!=null&&(!actualMode||manualFactsConfirmed),onClick={runTask{api.request("/v1/transactions/manual","POST",JSONObject().put("clientId",UUID.randomUUID().toString()).put("amountWon",order.toLong()-points.toLong()).put("cardChargeWon",order.toLong()-points.toLong()-money.toLong()).put("cardId",selectedCardId).put("purchasedAt",LocalDate.now(ZoneId.of("Asia/Seoul")).toString()).put("category","SHOPPING").put("included",true).apply{if(actualMode)put("purchaseFacts",purchaseFacts().put("confirmed",manualFactsConfirmed))});invalidate();refreshLedger();manualExpanded=false;message="수동 구매 기록을 추가했습니다."}}){Text("구매 기록 추가")}
       TextButton(enabled=!busy,onClick={manualExpanded=false}){Text("입력 닫기")}
      }
      }
