@@ -1,6 +1,6 @@
 package dev.cardadvisor.android
 internal object CheckoutTextParser {
- val labels=mapOf("총결제금액" to DetectionAmount.FINAL_TOTAL,"최종결제금액" to DetectionAmount.FINAL_TOTAL,"결제예정금액" to DetectionAmount.FINAL_TOTAL,"카드결제금액" to DetectionAmount.CARD,"포인트사용" to DetectionAmount.POINTS,"머니사용" to DetectionAmount.MONEY)
+ val labels=mapOf("총주문금액" to DetectionAmount.ORDER,"총결제금액" to DetectionAmount.FINAL_TOTAL,"최종결제금액" to DetectionAmount.FINAL_TOTAL,"결제예정금액" to DetectionAmount.FINAL_TOTAL,"카드결제금액" to DetectionAmount.CARD,"포인트사용" to DetectionAmount.POINTS,"머니사용" to DetectionAmount.MONEY)
  fun normalize(value:String)=value.replace(Regex("\\s+"),"")
  fun title(value:String)=normalize(value).replace("/","").replace("·","") in setOf("주문결제","주문서","주문서작성")
  fun label(value:String)=labels[normalize(value)]

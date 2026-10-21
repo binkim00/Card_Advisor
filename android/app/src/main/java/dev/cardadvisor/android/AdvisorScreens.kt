@@ -33,18 +33,18 @@ private fun displayWon(value: Long) = "%,d원".format(java.util.Locale.KOREA,val
 }
 
 @Composable internal fun PaymentFields(order:String,points:String,money:String,onOrder:(String)->Unit,onPoints:(String)->Unit,onMoney:(String)->Unit){
-    listOf(Triple("쿠폰·배송비 반영 주문 합계",order,onOrder),Triple("사용할 무상 적립포인트",points,onPoints),Triple("사용할 유상 충전 머니",money,onMoney)).forEach{(label,value,change)->
-        OutlinedTextField(value,change,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth())
+    listOf(Triple("쿠폰·배송비 반영 주문 합계",order,onOrder),Triple("사용할 무상 적립포인트",points,onPoints),Triple("사용할 유상 충전 머니",money,onMoney)).forEachIndexed{index,(label,value,change)->
+        OutlinedTextField(value,change,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth().testTag(listOf("paymentOrder","paymentPoints","paymentMoney")[index]))
     }
 }
 
-@Composable internal fun CheckoutOverview(order:String,points:String,money:String,busy:Boolean,onEdit:()->Unit){
+@Composable internal fun CheckoutOverview(order:String,points:String,money:String,busy:Boolean,paymentLabel:String="네이버페이 카드",onEdit:()->Unit){
     DesignPanel{
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
             Text("수동 결제 정보",style=MaterialTheme.typography.titleMedium)
             TextButton(enabled=!busy,onClick=onEdit,contentPadding=PaddingValues(0.dp)){Text("결제 정보 수정")}
         }
-        Text("네이버페이 카드 · 쇼핑",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+        Text(paymentLabel+" · 쇼핑",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
         val o=order.toLongOrNull();val p=points.toLongOrNull();val m=money.toLongOrNull()
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
             Text("카드 결제 예정액",style=MaterialTheme.typography.bodyMedium)

@@ -16,12 +16,13 @@ internal class CheckoutCandidateStore(private val packages:Map<String,String>,pr
   if(!sessionActive||observation.packageName !in packages||!observation.checkoutTitle||observation.authentication){clear();return}
   val snapshot=observation.copy(amounts=observation.amounts.mapValues{it.value.toSet()})
   val amount=snapshot.amounts[DetectionAmount.FINAL_TOTAL].orEmpty().singleOrNull()?.takeIf{it in 1..10000000}
+  fun field(kind:DetectionAmount)=snapshot.amounts[kind].orEmpty().singleOrNull()?.takeIf{it in 0..10000000}
   val now=clock();val old=state.value
   if(old!=null&&snapshot==lastObservation&&now-old.observedAt in 0 until 120000){
    state.value=old.copy(observedAt=now);return
   }
   lastObservation=snapshot
-  state.value=DetectedCheckout(++generation,packages.getValue(snapshot.packageName),snapshot.appVersion,amount,if(amount==null)"HELD" else "NEEDS_CONFIRMATION",if(amount==null)"AMBIGUOUS_OR_MISSING_TOTAL" else "UNVERIFIED_ROUTE_CONFIRM_REQUIRED",now)
+  state.value=DetectedCheckout(++generation,packages.getValue(snapshot.packageName),snapshot.appVersion,amount,if(amount==null)"HELD" else "NEEDS_CONFIRMATION",if(amount==null)"AMBIGUOUS_OR_MISSING_TOTAL" else "UNVERIFIED_ROUTE_CONFIRM_REQUIRED",now,field(DetectionAmount.ORDER),field(DetectionAmount.POINTS),field(DetectionAmount.MONEY))
  }
  @Synchronized fun current():DetectedCheckout?{
   val candidate=state.value?:return null

@@ -72,6 +72,8 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
  var cardRefundAmount by remember{mutableStateOf("")}
  var cardStates by remember{mutableStateOf(JSONArray())}
  var actualMode by remember{mutableStateOf(false)}
+ var paymentMethod by remember{mutableStateOf("NAVER_PAY_CARD")}
+ var confirmedDetectionGeneration by remember{mutableStateOf<Long?>(null)}
  var merchant by remember{mutableStateOf("NAVER_PLUS_STORE")};var ordinaryGoods by remember{mutableStateOf(true)};var factsConfirmed by remember{mutableStateOf(false)}
  var cancelReceivedDate by remember{mutableStateOf(LocalDate.now(ZoneId.of("Asia/Seoul")).toString())}
  fun purchaseFacts()=JSONObject().put("merchant",merchant).put("purchaseKind",if(ordinaryGoods)"GENERAL_GOODS" else "GIFT_CARD").put("confirmed",factsConfirmed)
@@ -90,6 +92,18 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
  }
  fun invalidate(){generation++;result=null;recommendationId=null;explanation=null;expiresAt=0}
  fun runTask(task:suspend()->Unit){if(busy)return;focus.clearFocus();keyboard?.hide();busy=true;Diagnostics.event(DiagnosticEvent.APP_TASK_ENQUEUED);scope.launch{Diagnostics.event(DiagnosticEvent.APP_TASK_BEGIN);try{task()}catch(e:NumberFormatException){message="금액은 숫자로 입력해 주세요."}catch(e:Exception){message=e.message?:"처리하지 못했습니다."}finally{busy=false;Diagnostics.event(DiagnosticEvent.APP_TASK_END)}}}
+ fun compareCards(){runTask{
+      if(actualMode&&!factsConfirmed){message="결제 금액과 조건을 먼저 확인해 주세요.";return@runTask}
+      val source=confirmedDetectionGeneration
+      if(source!=null&&CheckoutDetection.current()?.generation!=source){invalidate();factsConfirmed=false;message="주문서가 바뀌거나 만료됐습니다. 다시 확인해 주세요.";return@runTask}
+      val requestedGeneration=generation
+      val sum=order.toLong();val p=points.toLong();val m=money.toLong()
+      val context=JSONObject().put("orderValueWon",sum).put("pointUsedWon",p).put("prepaidMoneyUsedWon",m).put("cardChargeWon",sum-p-m).put("category","SHOPPING").put("paymentMethod",paymentMethod).put("installments",1).put("splitApproval","NO").put("confirmedByUser",true)
+      if(actualMode)context.put("purchaseFacts",purchaseFacts())
+      val c=JSONObject(api.request("/v1/checkout-sessions","POST",context))
+      val response=JSONObject(api.request("/v1/recommendations","POST",JSONObject().put("checkoutId",c.getString("id")).put("snapshotVersion",c.getLong("snapshotVersion")).put("mode",mode).put("maxOpportunityCostWon",tolerance.toLong())))
+      if(generation==requestedGeneration&&(source==null||CheckoutDetection.current()?.generation==source)){recommendationId=response.getString("id");result=response.getJSONObject("result");checkoutExpanded=false;expiresAt=Instant.parse(response.getString("expiresAt")).toEpochMilli();message="입력한 금액 기준의 예상 결과입니다. 결제는 쇼핑몰에서 직접 진행하세요."}
+ }}
  fun authenticate(register:Boolean){
   focus.clearFocus();keyboard?.hide();authError=null
   if(email.length>254||!Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$").matches(email)){authError="이메일 형식을 확인해 주세요.";return}
@@ -117,7 +131,12 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
    val edit=preferences.edit().putBoolean("consent",allowed);if(!allowed)edit.putBoolean("enabled",false);edit.apply();CheckoutDetection.authorize(true)
   }catch(e:kotlinx.coroutines.CancellationException){throw e}catch(e:Exception){preferences.edit().putBoolean("enabled",false).putBoolean("consent",false).apply();CheckoutDetection.authorize(false)}
  }
- LaunchedEffect(detectedCheckout?.generation){if(detectedCheckout!=null){invalidate();factsConfirmed=false}}
+ LaunchedEffect(detectedCheckout?.generation){
+  val source=confirmedDetectionGeneration
+  if(source!=null&&detectedCheckout?.generation!=source){invalidate();factsConfirmed=false;confirmedDetectionGeneration=null;message="주문서가 바뀌거나 만료됐습니다. 주문서 금액을 다시 확인해 주세요."}
+  else if(detectedCheckout!=null&&source==null){invalidate();factsConfirmed=false}
+ }
+ LaunchedEffect(loggedIn){if(loggedIn)while(true){CheckoutDetection.current();delay(500)}}
  LaunchedEffect(expiresAt){if(expiresAt>0){while(System.currentTimeMillis()<expiresAt){delay(500)};result=null;message="추천이 만료되었습니다. 주문 금액을 다시 확인해 주세요."}}
  LaunchedEffect(checkoutRequest,loggedIn){if(checkoutRequest>0&&loggedIn)tab=11}
  LaunchedEffect(loggedIn,tab){if(loggedIn&&tab in listOf(7,2))runTask{invalidate();refreshLedger()}}
@@ -154,7 +173,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
       Button(enabled=!busy,onClick={runTask{api.request("/v1/demo/setup","POST");refreshLedger();invalidate();message="가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다."}}){Text("가상 데이터 준비")}
      }
     }
-    11->DetectionEditor(api,onBusyChanged={busy=it},onConfirmed={o,p,m,shop->order=o;points=p;money=m;merchant=shop;actualMode=true;ordinaryGoods=true;factsConfirmed=true;selectedCardId=null;invalidate();tab=1},onManual={actualMode=true;factsConfirmed=false;invalidate();tab=1})
+    11->DetectionEditor(api,onBusyChanged={busy=it},onConfirmed={o,p,m,shop,method,source->order=o;points=p;money=m;merchant=shop;paymentMethod=method;actualMode=true;ordinaryGoods=true;factsConfirmed=true;confirmedDetectionGeneration=source;selectedCardId=null;invalidate();tab=1;compareCards()},onManual={confirmedDetectionGeneration=null;actualMode=true;factsConfirmed=false;invalidate();tab=1})
     10->InsightsEditor(api,onBusyChanged={busy=it},onChanged={invalidate();refreshLedger()})
     9->CardProductsEditor(api,onBusyChanged={busy=it},onChanged={actualMode=true;selectedCardId=null;invalidate();refreshPerformance()},onEditMonth={tab=3},onOpenFinance={mappingOrganization=it;tab=6})
     8->AccountSettingsEditor(api,onBusyChanged={busy=it},onInvalidated={invalidate()},onDeleted={loggedIn=false;invalidate();ledger=JSONArray();budgetSummary=null;cardStates=JSONArray();tab=7;message="계정을 삭제했습니다."})
@@ -188,27 +207,19 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
       Row{Checkbox(factsConfirmed,{factsConfirmed=it;invalidate()},modifier=Modifier.testTag("actualFactsConfirmed"));Text("금액·국내 원화·구매 종류·단일 카드 승인 조건을 확인했습니다.")}
       Text("실제 매입 업종·행사·취소 정산 결과에 따라 달라질 수 있습니다.",style=MaterialTheme.typography.bodySmall)
      }
-     CheckoutOverview(order,points,money,busy){checkoutExpanded=!checkoutExpanded}
+     CheckoutOverview(order,points,money,busy,paymentLabel=if(paymentMethod=="DIRECT_CARD")"일반 카드" else "네이버페이 카드"){checkoutExpanded=!checkoutExpanded}
      if(checkoutExpanded) DesignPanel {
-      PaymentFields(order,points,money,{order=it;invalidate()},{points=it;invalidate()},{money=it;invalidate()})
-      Text("네이버페이 카드 · 일시불 · 단일 승인",style=MaterialTheme.typography.bodySmall)
+      PaymentFields(order,points,money,{order=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{points=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{money=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()})
+      Text((if(paymentMethod=="DIRECT_CARD")"일반 카드" else "네이버페이 카드")+" · 일시불 · 단일 승인",style=MaterialTheme.typography.bodySmall)
       TextButton(onClick={checkoutExpanded=false}){Text("입력 접기")}
      }
      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){listOf("BENEFIT" to "이번 혜택","PERFORMANCE" to "실적","BALANCED" to "균형").forEach{(value,label)->FilterChip(selected=mode==value,onClick={mode=value;invalidate()},label={Text((if(mode==value)"✓ " else "")+label)})}}
      if(mode=="BALANCED")OutlinedTextField(tolerance,{tolerance=it;invalidate()},label={Text("허용할 이번 혜택 차이 · 기본 0원")},modifier=Modifier.fillMaxWidth())
-     result?.let{r-> RecommendationResults(r) }
+     result?.let{r-> androidx.compose.foundation.layout.Column(Modifier.testTag("recommendationResult")){RecommendationResults(r)} }
      recommendationId?.let{id->OutlinedButton(enabled=!busy,onClick={runTask{val response=JSONObject(api.request("/v1/recommendations/$id/explanation","POST"));if(id==recommendationId)explanation=response}},modifier=Modifier.testTag("recommendationExplain")){Text("추천 이유 확인")}}
      explanation?.let{DesignPanel{AssistanceView(it)}}
      if(result==null) EmptyRecommendation()
-     Button(enabled=!busy,shape=androidx.compose.foundation.shape.RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),onClick={runTask{
-      val requestedGeneration=generation
-      val sum=order.toLong();val p=points.toLong();val m=money.toLong()
-      val context=JSONObject().put("orderValueWon",sum).put("pointUsedWon",p).put("prepaidMoneyUsedWon",m).put("cardChargeWon",sum-p-m).put("category","SHOPPING").put("paymentMethod","NAVER_PAY_CARD").put("installments",1).put("splitApproval","NO").put("confirmedByUser",true)
-      if(actualMode)context.put("purchaseFacts",purchaseFacts())
-      val c=JSONObject(api.request("/v1/checkout-sessions","POST",context))
-      val response=JSONObject(api.request("/v1/recommendations","POST",JSONObject().put("checkoutId",c.getString("id")).put("snapshotVersion",c.getLong("snapshotVersion")).put("mode",mode).put("maxOpportunityCostWon",tolerance.toLong())))
-      if(generation==requestedGeneration){recommendationId=response.getString("id");result=response.getJSONObject("result");checkoutExpanded=false;expiresAt=Instant.parse(response.getString("expiresAt")).toEpochMilli();message="입력한 금액 기준의 예상 결과입니다. 결제는 쇼핑몰에서 직접 진행하세요."}
-     }}){Text("금액 확인 후 카드 비교")}
+     Button(enabled=!busy,shape=androidx.compose.foundation.shape.RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth().heightIn(min=52.dp).testTag("compareCards"),onClick={compareCards()}){Text("금액 확인 후 카드 비교")}
      Text(if(actualMode)"약관 기반 예상 · 실제 결제는 쇼핑몰에서 진행" else "가상 규칙으로 계산 · 실제 결제는 쇼핑몰에서 진행",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
     2->{
@@ -219,7 +230,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
      }
      if(manualExpanded) DesignPanel {
      Text("수동 구매 기록",style=MaterialTheme.typography.titleLarge)
-     PaymentFields(order,points,money,{order=it;invalidate()},{points=it;invalidate()},{money=it;invalidate()})
+     PaymentFields(order,points,money,{order=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{points=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{money=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()})
      Text("실제로 사용한 카드를 선택해 주세요. 추천 조회는 실적에 반영되지 않습니다.")
      for(i in 0 until cardStates.length()){val c=cardStates.getJSONObject(i)
       if(c.optString("benefitRuleVersion").startsWith("OFFICIAL_")!=actualMode)continue
