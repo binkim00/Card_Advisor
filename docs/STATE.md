@@ -557,5 +557,9 @@ Notion FR-01~FR-24를 Android 앱·백엔드·PostgreSQL·외부 연동·테스�
 - V25 대조 이력과 Android 명시 버튼·한국어 결과. 합성 CODEF+API/PG66개 통과 후 엄격 목록계약 추가44개 통과, Android 빌드 성공. .run/finance-reconciliation-tests.log, device-free-api-pg-retry.log. 실제 CODEF 신규 호출 없음.
 - 추가인증 공통 SDK의 is2Way/twoWayInfo는 확인했으나 현재 KB/하나 ID/PW 상품에서 지원되는 인증 방식·응답 조건을 추측해 화면을 활성화하지 않음. 공식 기관별 지원 근거를 추가 확인한다.
 
+## 2026-10-22 기존 로그인 오프라인 호환·본문 제한
+- 인증된 dashboard의 사용자 ID로 이전 암호화 로그인 형식을 안전하게 갱신. 로그인 유지 및 owner/서버 대조, 세션 변경 중 응답 적용 거부. 기존 형식 세션 복원→캐시→장애→회복 에뮬레이터/API/PG 2흐름 통과.
+- Content-Length 없는 본문도 64KiB까지 읽어 제한하고 처리 후 버퍼 삭제. 경계/초과/원본문 보존/429 3개 통과. 증거 .run/offline-owner-pg.log, request-bound-test.log.
+
 ## 다음 행동 1개
 공식 규격에서 확인 가능한 추가 인증·실제 상품 규칙의 남은 범위를 점검하고, 운영 검사 자동화와 외부 호출 없는 계약 검증을 보완한다.

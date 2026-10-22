@@ -75,7 +75,7 @@ public class AdvisorService {
  }
  public Map<String,Object> dashboard(UUID u,String m){
   long revision=lock(u);var result=new LinkedHashMap<String,Object>();result.put("ledger",entries(u,m));result.put("performance",performance(u,m));
-  result.put("budget",db.queryForObject("SELECT count(*) FROM budgets WHERE user_id=? AND month=?",Integer.class,u,month(m))==0?null:budgetSummary(u,m));result.put("revision",revision);return result;
+  result.put("budget",db.queryForObject("SELECT count(*) FROM budgets WHERE user_id=? AND month=?",Integer.class,u,month(m))==0?null:budgetSummary(u,m));result.put("revision",revision);result.put("userId",u.toString());return result;
  }
  public List<Card> cards(UUID u){var states=performance(u,currentMonth());var profiles=profiles(u);return profiles.stream().map(c->{var s=states.stream().filter(p->p.id().equals(c.id())).findFirst().orElseThrow();return new Card(c.id(),c.name(),c.rateBp(),s.currentQualified(),s.performanceWon(),c.targetWon(),s.remainingCapWon(),c.performanceEligible(),c.source());}).toList();}
  public Map<String,Object> demo(UUID u){lock(u);

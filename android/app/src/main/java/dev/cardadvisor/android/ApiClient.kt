@@ -16,13 +16,22 @@ class ApiClient(var baseUrl: String = BuildConfig.API_BASE_URL,private val sessi
  val lastUpdated=MutableStateFlow<Long?>(null)
  private val retryUntil=java.util.concurrent.atomic.AtomicLong()
  suspend fun dashboard(month:String):JSONObject{
-  val expectedOwner=owner;val expectedBase=baseUrl
+  val expectedOwner=owner;val expectedBase=baseUrl;val expectedToken=token
   try{
    val response=JSONObject(request("/v1/dashboard?month=$month"))
    val ledger=response.getJSONArray("ledger");val performance=response.getJSONArray("performance");val budget=if(response.isNull("budget"))JSONObject.NULL else response.getJSONObject("budget")
    if(owner!=expectedOwner||baseUrl!=expectedBase||token==null)throw ApiException(401,"SESSION_EXPIRED","다시 로그인해 주세요.")
-   val value=JSONObject().put("owner",expectedOwner).put("base",expectedBase).put("month",month).put("fetchedAt",System.currentTimeMillis()).put("ledger",ledger).put("performance",performance).put("budget",budget)
-   cacheLock.withLock{if(owner==expectedOwner&&token!=null){if(expectedOwner!=null)dashboardStore?.save(value);offline.value=false;lastUpdated.value=value.getLong("fetchedAt")}}
+   val verifiedOwner=response.getString("userId")
+   java.util.UUID.fromString(verifiedOwner)
+   if(expectedOwner!=null&&verifiedOwner!=expectedOwner)throw ApiException(401,"SESSION_EXPIRED","다시 로그인해 주세요.")
+   // Upgrade older encrypted sessions only after an authenticated, same-session response.
+   if(expectedOwner==null)refreshLock.withLock{cacheLock.withLock{
+    if(token!=expectedToken||baseUrl!=expectedBase||owner!=null)throw ApiException(401,"SESSION_EXPIRED","다시 로그인해 주세요.")
+    val refresh=refreshToken?:throw ApiException(401,"SESSION_EXPIRED","다시 로그인해 주세요.")
+    sessionStore?.save(SavedSession(expectedToken!!,refresh,verifiedOwner));owner=verifiedOwner
+   }}
+   val value=JSONObject().put("owner",verifiedOwner).put("base",expectedBase).put("month",month).put("fetchedAt",System.currentTimeMillis()).put("ledger",ledger).put("performance",performance).put("budget",budget)
+   cacheLock.withLock{if(owner==verifiedOwner&&baseUrl==expectedBase&&token!=null){dashboardStore?.save(value);offline.value=false;lastUpdated.value=value.getLong("fetchedAt")}}
    return value
   }catch(e:kotlinx.coroutines.CancellationException){throw e}catch(e:Exception){
    // Authentication/validation errors never fall back to another or expired account's data.

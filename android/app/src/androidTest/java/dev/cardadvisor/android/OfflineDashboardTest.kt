@@ -12,10 +12,13 @@ import java.io.File
 class OfflineDashboardTest{
  @Test fun encryptedAccountBoundOfflineReadAndRecovery()=runBlocking{
   val run=InstrumentationRegistry.getArguments().getString("runId")!!;val context=InstrumentationRegistry.getInstrumentation().targetContext
-  val session=SecureSessionStore(context,"offline-session-$run");val cache=SecureDashboardStore(context,"offline-cache-$run");val api=ApiClient("http://127.0.0.1:18080",session,cache);val month=YearMonth.now(ZoneId.of("Asia/Seoul")).toString()
+  val session=SecureSessionStore(context,"offline-session-$run");val cache=SecureDashboardStore(context,"offline-cache-$run");var api=ApiClient("http://127.0.0.1:18080",session,cache);val month=YearMonth.now(ZoneId.of("Asia/Seoul")).toString()
   try{
    api.setSession(JSONObject(api.request("/v1/auth/register","POST",JSONObject().put("email","offline-$run@example.test").put("password","Synthetic-password-$run"))));api.request("/v1/demo/setup","POST")
-   val first=api.dashboard(month);Assert.assertFalse(api.offline.value)
+   // Simulate an installed version whose encrypted session predates owner metadata.
+   session.save(SavedSession(api.token!!,api.refreshToken!!))
+   api=ApiClient(api.baseUrl,session,cache);Assert.assertTrue(api.restoreSession())
+   val first=api.dashboard(month);Assert.assertEquals(first.getString("owner"),session.load()!!.owner);Assert.assertFalse(api.offline.value)
    val owner=first.getString("owner");Assert.assertNull(cache.load(UUID.randomUUID().toString(),api.baseUrl,month));Assert.assertNull(cache.load(owner,"https://different.example.test",month));Assert.assertNull(cache.load(owner,api.baseUrl,YearMonth.parse(month).minusMonths(1).toString()))
    val blob=File(context.noBackupFilesDir,"offline-cache-$run.enc").readBytes();Assert.assertFalse(String(blob,Charsets.ISO_8859_1).contains(owner))
    val blocked=JSONObject(api.request("/v1/test/network","POST",JSONObject().put("offline",true)))
