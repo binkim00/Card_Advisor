@@ -134,8 +134,20 @@ public class AdvisorService {
   if(ActualCardRules.actual(card.source()))db.update("UPDATE ledger_entries SET purchase_facts=?::jsonb,performance_eligible=?,performance_rule_version=?,benefit_rate_bp=?,benefit_rule_version=? WHERE user_id=? AND id=?",json(e.purchaseFacts()),ActualCardRules.eligible(e.purchaseFacts()),card.source(),ActualCardRules.eligible(e.purchaseFacts())?card.rateBp():0,card.source(),u,id);
   changed(u);return one("SELECT * FROM ledger_entries WHERE id=? AND user_id=?",id,u);
  }
- public List<Map<String,Object>> entries(UUID u,String m){LocalDate from=month(m);return db.queryForList("SELECT e.*,p.payload->>'name' AS card_name,t.id AS financial_transaction_id,t.merchant_name,CASE WHEN t.id IS NOT NULL THEN COALESCE(mapped.payload->>'name',t.card_label) ELSE p.payload->>'name' END AS display_card_name,CASE WHEN t.card_mask ~ '^\\*{13}[0-9]{3}$' THEN right(t.card_mask,3) WHEN t.card_mask ~ '^[0-9]{4}\\*{8}[0-9]{4}$' THEN right(t.card_mask,4) ELSE NULL END AS card_last_digits,t.status AS financial_status,t.source AS financial_source,e.amount_won-COALESCE((SELECT sum(c.amount_won) FROM cancellations c WHERE c.user_id=e.user_id AND c.transaction_id=e.id),0) AS net_won,CASE WHEN EXISTS(SELECT 1 FROM cancellations c WHERE c.user_id=e.user_id AND c.transaction_id=e.id AND c.card_refund_won IS NULL) THEN NULL ELSE e.card_charge_won-COALESCE((SELECT sum(c.card_refund_won) FROM cancellations c WHERE c.user_id=e.user_id AND c.transaction_id=e.id),0) END AS card_net_won FROM ledger_entries e LEFT JOIN cards p ON p.user_id=e.user_id AND p.id=e.card_id LEFT JOIN financial_transactions t ON t.user_id=e.user_id AND t.ledger_id=e.id AND t.kind='APPROVAL' LEFT JOIN financial_card_mappings fm ON fm.user_id=t.user_id AND fm.connection_id=t.connection_id AND fm.source_mask=t.card_mask AND fm.source_label=COALESCE(t.card_label,'') LEFT JOIN cards mapped ON mapped.user_id=fm.user_id AND mapped.id=fm.card_id WHERE e.user_id=? AND e.purchased_at>=? AND e.purchased_at<? ORDER BY e.purchased_at DESC,e.id",u,from,from.plusMonths(1));}
- public record ClassificationInput(String category,Boolean included,Long version){}
+ public List<Map<String,Object>> entries(UUID u,String m){LocalDate from=month(m);var result=db.queryForList("SELECT e.*,p.payload->>'name' AS card_name,t.id AS financial_transaction_id,t.merchant_name,CASE WHEN t.id IS NOT NULL THEN COALESCE(mapped.payload->>'name',t.card_label) ELSE p.payload->>'name' END AS display_card_name,CASE WHEN t.card_mask ~ '^\\*{13}[0-9]{3}$' THEN right(t.card_mask,3) WHEN t.card_mask ~ '^[0-9]{4}\\*{8}[0-9]{4}$' THEN right(t.card_mask,4) ELSE NULL END AS card_last_digits,t.status AS financial_status,t.source AS financial_source,e.amount_won-COALESCE((SELECT sum(c.amount_won) FROM cancellations c WHERE c.user_id=e.user_id AND c.transaction_id=e.id),0) AS net_won,CASE WHEN EXISTS(SELECT 1 FROM cancellations c WHERE c.user_id=e.user_id AND c.transaction_id=e.id AND c.card_refund_won IS NULL) THEN NULL ELSE e.card_charge_won-COALESCE((SELECT sum(c.card_refund_won) FROM cancellations c WHERE c.user_id=e.user_id AND c.transaction_id=e.id),0) END AS card_net_won FROM ledger_entries e LEFT JOIN cards p ON p.user_id=e.user_id AND p.id=e.card_id LEFT JOIN financial_transactions t ON t.user_id=e.user_id AND t.ledger_id=e.id AND t.kind='APPROVAL' LEFT JOIN financial_card_mappings fm ON fm.user_id=t.user_id AND fm.connection_id=t.connection_id AND fm.source_mask=t.card_mask AND fm.source_label=COALESCE(t.card_label,'') LEFT JOIN cards mapped ON mapped.user_id=fm.user_id AND mapped.id=fm.card_id WHERE e.user_id=? AND e.purchased_at>=? AND e.purchased_at<? ORDER BY e.purchased_at DESC,e.id",u,from,from.plusMonths(1));
+  for(var row:result){row.put("allocations_won",originalAllocation(row));row.put("net_allocations_won",netAllocation(row));row.put("allocation_policy","PROPORTIONAL_REFUND_V1");row.remove("budget_allocations");}return result;}
+
+ public record ClassificationInput(String category,Boolean included,Long version,Map<String,Long> allocationsWon){
+  public ClassificationInput(String category,Boolean included,Long version){this(category,included,version,null);}
+ }
+ private Map<String,Long> originalAllocation(Map<String,Object> row){
+  if(row.get("allocations_won") instanceof Map<?,?> value){var out=new TreeMap<String,Long>();value.forEach((k,v)->out.put(k.toString(),((Number)v).longValue()));return out;}
+  if(row.get("budget_allocations")==null)return Map.of((String)row.get("category"),((Number)row.get("amount_won")).longValue());
+  try{return mapper.readValue(row.get("budget_allocations").toString(),new com.fasterxml.jackson.core.type.TypeReference<Map<String,Long>>(){});}catch(Exception e){throw new IllegalStateException("STORED_ALLOCATION_INVALID");}
+ }
+ public Map<String,Long> netAllocation(Map<String,Object> row){return dev.cardadvisor.domain.BudgetAllocation.net(originalAllocation(row),((Number)row.get("amount_won")).longValue(),((Number)row.get("net_won")).longValue());}
+ public List<Map<String,Object>> classificationHistory(UUID u,UUID id){entry(u,id);return db.queryForList("SELECT version,category,included,allocations::text AS allocations,changed_at FROM ledger_classification_history WHERE user_id=? AND transaction_id=? ORDER BY version DESC",u,id);}
+
  private static final Set<String> EDIT_CATEGORIES=Set.of("SHOPPING","FOOD","TRANSPORT","HOUSING","HEALTH","LEISURE","OTHER");
  public Map<String,Object> entry(UUID u,UUID id){
   lock(u);var raw=one("SELECT purchased_at FROM ledger_entries WHERE user_id=? AND id=?",u,id);
@@ -146,8 +158,14 @@ public class AdvisorService {
   if(in.version()==null||in.version()<1||in.included()==null||in.category()==null||
      (!EDIT_CATEGORIES.contains(in.category())&&!in.category().equals(old.get("category"))))throw new ApiError(422,"INVALID_CLASSIFICATION");
   if(in.version()!=((Number)old.get("classification_version")).longValue())throw new ApiError(409,"VERSION_CONFLICT");
-  if(in.category().equals(old.get("category"))&&in.included().equals(old.get("included")))return entry(u,id);
-  db.update("UPDATE ledger_entries SET category=?,included=?,classification_version=classification_version+1,classification_updated_at=now() WHERE user_id=? AND id=?",in.category(),in.included(),u,id);
+  long total=((Number)old.get("amount_won")).longValue();
+  Map<String,Long> allocations=in.allocationsWon()==null?Map.of(in.category(),total):in.allocationsWon();
+  if(!EDIT_CATEGORIES.containsAll(allocations.keySet())||!allocations.containsKey(in.category()))throw new ApiError(422,"INVALID_ALLOCATION");
+  try{dev.cardadvisor.domain.BudgetAllocation.net(allocations,total,total);}catch(RuntimeException e){throw new ApiError(422,"ALLOCATION_SUM_MISMATCH");}
+  if(in.category().equals(old.get("category"))&&in.included().equals(old.get("included"))&&allocations.equals(originalAllocation(old)))return entry(u,id);
+  db.update("INSERT INTO ledger_classification_history(user_id,transaction_id,version,category,included,allocations) VALUES (?,?,?,?,?,?::jsonb) ON CONFLICT DO NOTHING",u,id,in.version(),old.get("category"),old.get("included"),json(originalAllocation(old)));
+  db.update("UPDATE ledger_entries SET category=?,included=?,budget_allocations=?::jsonb,classification_version=classification_version+1,classification_updated_at=now() WHERE user_id=? AND id=?",in.category(),in.included(),json(allocations),u,id);
+  db.update("INSERT INTO ledger_classification_history(user_id,transaction_id,version,category,included,allocations) VALUES (?,?,?,?,?,?::jsonb)",u,id,in.version()+1,in.category(),in.included(),json(allocations));
   changed(u);return entry(u,id);
  }
  public record CategoryBalance(String category,Long limitWon,long spentWon,Long remainingWon){}
@@ -157,7 +175,7 @@ public class AdvisorService {
   lock(u);var budget=budget(u,m);var spent=new TreeMap<String,Long>();long totalSpent=0;
   for(var e:entries(u,m)){if(!Boolean.TRUE.equals(e.get("included")))continue;
    long net=((Number)e.get("net_won")).longValue();totalSpent=Math.addExact(totalSpent,net);
-   spent.merge((String)e.get("category"),net,Math::addExact);
+   netAllocation(e).forEach((category,part)->spent.merge(category,part,Math::addExact));
   }
   var keys=new TreeSet<String>(budget.categories().keySet());keys.addAll(spent.keySet());var categories=new ArrayList<CategoryBalance>();
   for(String key:keys){Long limit=budget.categories().get(key);long used=spent.getOrDefault(key,0L);categories.add(new CategoryBalance(key,limit,used,limit==null?null:Math.subtractExact(limit,used)));}
@@ -212,7 +230,7 @@ public class AdvisorService {
   if(!Boolean.TRUE.equals(r.get("valid"))||((Number)r.get("version")).longValue()!=in.snapshotVersion())throw new ApiError(409,"STALE_CHECKOUT");
   Checkout c=decode(r.get("payload"),Checkout.class);String m=YearMonth.now(ZoneId.of("Asia/Seoul")).toString();BudgetInput b=budget(u,m);
   var ledger=entries(u,m);long spent=ledger.stream().filter(e->Boolean.TRUE.equals(e.get("included"))).mapToLong(e->((Number)e.get("net_won")).longValue()).sum();
-  long categorySpent=ledger.stream().filter(e->Boolean.TRUE.equals(e.get("included"))&&c.category().equals(e.get("category"))).mapToLong(e->((Number)e.get("net_won")).longValue()).sum();
+  long categorySpent=ledger.stream().filter(e->Boolean.TRUE.equals(e.get("included"))).mapToLong(e->netAllocation(e).getOrDefault(c.category(),0L)).sum();
   Result result=engine.evaluate(cards(u),c,new Budget(b.totalWon(),spent,b.categories().get(c.category()),categorySpent,fixedRemaining(u,m,b)),Objects.requireNonNull(in.mode()),in.maxOpportunityCostWon());
   UUID id=UUID.randomUUID();db.update("INSERT INTO recommendations(id,user_id,checkout_id,user_revision,checkout_version,payload,expires_at,calculation_month,rule_set_version) VALUES (?,?,?,?,?,?::jsonb,?,?,?)",id,u,in.checkoutId(),revision,in.snapshotVersion(),json(result),r.get("expires_at"),month(m),RULE_SET_VERSION);
   return Map.of("id",id,"result",result,"basis",Map.of("userRevision",revision,"snapshotVersion",in.snapshotVersion(),"budgetVersion",b.version(),"ruleSetVersion",RULE_SET_VERSION),"expiresAt",r.get("expires_at"));

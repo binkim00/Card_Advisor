@@ -148,3 +148,5 @@ FR-01/03/05/09/10/13/14/15/17/18/19/21/23/24의 제한된 실제 상품 규칙·
 2026-10-21 FR-11/12/13/14/19 관련: CheckoutCandidateStore·DetectionEditor·AdvisorApp에서 감지 세대/전체 관측 변경·만료 무효화, 미확인 입력 보존, 사용자 선택 결제수단, 확인 버튼→추천API 자동 1회 연결. JVM15개와 CheckoutRecommendationFlowTest/AndroidCheckoutRecommendationPostgresTest 에뮬레이터→실HTTP→격리PG 통과. 실제 네이버/무신사 기기 검증은 기존 범위 유지, docs/verification/2026-10-21-checkout-recommendation.md 참조.
 
 2026-10-21 최종 FR-08/11/12/13/14/19 회귀: 늦은 추천응답 폐기·네이버/무신사 문맥·명시적 별도 수동구매 확인 검증, 기존 수동/금융 취소·실적·혜택·예산 에뮬레이터→API→격리PG 회귀 통과. 휴대폰/실쇼핑·정상Docker API 재가동 경계는 STATE 최신 기록 참조.
+
+2026-10-22 FR-08/09/14/16: V23 카테고리 분할·분류 변경 이력·부분취소 비례 배분 구현. 예산/추천 집계 연결 및 실적·혜택 불변, API/PG7개·Android 빌드 통과. 기존 미구현 목록의 카테고리 분할 항목을 갱신하며 전체 완료는 아님.

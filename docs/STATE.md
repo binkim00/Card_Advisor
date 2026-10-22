@@ -534,5 +534,11 @@ Notion FR-01~FR-24를 Android 앱·백엔드·PostgreSQL·외부 연동·테스�
 - JVM 관련15개·debug/androidTest/release 빌드 성공(.run/checkout-manual-separation-build.log), release는 미서명·기본 API주소 미설정 상태이며 배포 완료가 아니다. 실폰 설치 미수행. 실제 CODEF·AI·메일 호출0, 기존 Docker DB/개인 로그인·거래 변경 없음.
 - 현재 기능 수정은 로컬 Git에 검증 후 단계별 커밋. 기존 정상 API18080은 Docker 오류로 미복구. 전체 서비스 완성/실제 쇼핑 추천 성공/공개 배포로 확대하지 않는다. 다음 단계는 원 실행환경 복구.
 
+## 2026-10-22 기기 없이 전체 잔여 구현 진행
+- 사용자 지시: 기기 없이 가능한 구현·검증을 모두 진행. 실제 인증/유료 호출/공개 배포는 대체 성공으로 표시하지 않음.
+- Docker4.82 재기동에서 inference 다음 secrets 소켓 오류 확인. Docker 소유 프로세스·docker-desktop 배포를 종료하고 LocalAppData의 Docker/run 및 docker-secrets-engine만 삭제 없이 보존 이동. 엔진29.6.1 및 기존 DB 기동 성공. 원장187/금융190/상품매핑1 유지, 암호화 백업 및 격리 복원 검증 성공. 재시작 재발 방지까지 검증한 것은 아님.
+- V23 예산 카테고리 분할/변경 이력 API·Android 입력. 원래 지출 합계 검증, 부분취소 비례 배분·원단위 합계 보존, 카드 실적·혜택과 독립, 추천 예산 집계 연동. 사용자 격리/저장충돌·취소/배분·기존서비스 PG7개 통과, Android debug/단위검사 빌드 통과. 증거 .run/budget-allocation-tests.log, device-free-android-build.log. 물리 기기 확인 없음.
+- 미완료: 고정비 부분/타월 배분, 오프라인 읽기, 금융 추가인증·UNKNOWN대조, 나머지 공식 규칙/외부 검증과 운영 준비. 전체 완료 아님.
+
 ## 다음 행동 1개
-기존 Docker DB 디스크와 개인 자료를 보존하면서 Docker 시작 오류를 복구하고 정상 API18080을 재가동한다.
+고정비의 부분 금액·다른 월 거래 연결을 구현하고 취소/이중 차감·충돌을 API와 DB로 검증한다.

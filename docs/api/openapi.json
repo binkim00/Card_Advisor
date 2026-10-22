@@ -2457,6 +2457,30 @@
           }
         }
       }
+    },
+    "/v1/transactions/{id}/classification-history": {
+      "get": {
+        "summary": "본인 거래 분류 변경 이력",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "버전별 category/included/allocations/changed_at"
+          },
+          "404": {
+            "description": "본인 거래 없음"
+          }
+        }
+      }
     }
   },
   "components": {

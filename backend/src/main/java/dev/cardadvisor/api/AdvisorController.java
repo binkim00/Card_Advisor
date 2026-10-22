@@ -17,6 +17,7 @@ public class AdvisorController {
  @GetMapping("/transactions") public Object entries(HttpServletRequest r,@RequestParam String month){return service.entries(user(r),month);}
  @GetMapping("/transactions/{id}") public Object entryDetail(HttpServletRequest r,@PathVariable UUID id){return service.entry(user(r),id);}
  @RequestMapping(value="/transactions/{id}/classification",method={RequestMethod.PUT,RequestMethod.PATCH}) public Object classify(HttpServletRequest r,@PathVariable UUID id,@RequestBody ClassificationInput body){return service.classify(user(r),id,body);}
+ @GetMapping("/transactions/{id}/classification-history") public Object history(HttpServletRequest r,@PathVariable UUID id){return service.classificationHistory(user(r),id);}
  @GetMapping("/budgets/{month}/summary") public Object budgetSummary(HttpServletRequest r,@PathVariable String month){return service.budgetSummary(user(r),month);}
  @PostMapping("/transactions/manual") public Object entry(HttpServletRequest r,@RequestBody EntryInput e){return service.addEntry(user(r),e);}
  @PutMapping("/transactions/{id}/card") public Object link(HttpServletRequest r,@PathVariable UUID id,@RequestBody LinkCardInput body){return service.linkCard(user(r),id,body);}

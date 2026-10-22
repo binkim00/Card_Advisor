@@ -33,10 +33,12 @@ private fun money(value:Long)="%,d원".format(value)
  val scope=rememberCoroutineScope { kotlinx.coroutines.Dispatchers.Main.immediate }
  var saved by remember(initial.getString("id")){mutableStateOf(initial)}
  var category by remember{mutableStateOf(initial.getString("category"))}
+ var split by remember{mutableStateOf(initial.optJSONObject("allocations_won")?.length()?.let{it>1}?:false)}
+ val allocations=remember{mutableStateMapOf<String,String>().apply{val a=initial.optJSONObject("allocations_won");ledgerCategories.keys.forEach{put(it,if(a?.has(it)==true)a.getLong(it).toString() else "")}}}
  var included by remember{mutableStateOf(initial.getBoolean("included"))}
  var busy by remember{mutableStateOf(false)};var conflict by remember{mutableStateOf(false)}
  var notice by remember{mutableStateOf("부분 취소 후 남은 지출을 예산에 반영합니다. 카드 승인액·환불액·실적·혜택은 변경하지 않습니다.")}
- fun adopt(value:JSONObject){saved=value;category=value.getString("category");included=value.getBoolean("included");conflict=false}
+ fun adopt(value:JSONObject){saved=value;val a=value.optJSONObject("allocations_won");split=(a?.length()?:0)>1;ledgerCategories.keys.forEach{allocations[it]=if(a?.has(it)==true)a.getLong(it).toString() else ""};category=value.getString("category");included=value.getBoolean("included");conflict=false}
  fun action(task:suspend()->Unit){if(busy)return;busy=true;onBusyChanged(true);notice="처리 중입니다."
   scope.launch{try{task()}catch(e:CancellationException){throw e}catch(e:ApiException){
    if(e.status==409&&e.code=="VERSION_CONFLICT"){conflict=true;onCommitted();notice="다른 곳에서 분류가 변경되었습니다. 내 입력은 유지했습니다. 최신 값을 확인해 주세요."}
@@ -51,6 +53,11 @@ private fun money(value:Long)="%,d원".format(value)
    for(pair in ledgerCategories.entries.chunked(2)){Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
     for((code,label) in pair)FilterChip(selected=category==code,enabled=!busy,onClick={category=code},label={Text(label)},modifier=Modifier.testTag("classify_$code"))
    }}
+   Row{Checkbox(split,{split=it},enabled=!busy);Text("여러 카테고리로 나누기")}
+   if(split){
+    Text("취소 전 원래 지출 ${money(saved.getLong("amount_won"))}을 나눠 입력하세요. 부분 취소는 같은 비율로 차감하며 원 단위 나머지는 큰 소수부터 배분합니다.")
+    ledgerCategories.forEach{(code,label)->OutlinedTextField(allocations[code]?:"",{allocations[code]=it},label={Text(label+" 배분액 (원)")},enabled=!busy,singleLine=true,modifier=Modifier.testTag("allocation_$code"))}
+   }
    Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Text("예산에 포함");Switch(checked=included,onCheckedChange={included=it},enabled=!busy,modifier=Modifier.testTag("budgetIncluded"))}
    Text(if(included)"이번 달 전체·분류별 예산 지출에 포함합니다." else "예산 지출에서 제외합니다. 원장과 카드 실적·혜택에는 남습니다.")
    if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -65,7 +72,9 @@ private fun money(value:Long)="%,d원".format(value)
    }}){Text("최신 분류 불러오기 (입력 초기화)")}
   }
  },confirmButton={Button(enabled=!busy&&!conflict,onClick={action{
-  api.request("/v1/transactions/${saved.getString("id")}/classification","PUT",JSONObject().put("category",category).put("included",included).put("version",saved.getLong("classification_version")))
+  val body=JSONObject().put("category",category).put("included",included).put("version",saved.getLong("classification_version"))
+  if(split){val parts=JSONObject();var sum=0L;for((key,value) in allocations){if(value.isBlank())continue;val n=value.toLongOrNull();require(n!=null&&n in 0..saved.getLong("amount_won")){"배분액은 0 이상의 정수로 입력해 주세요."};sum+=n;parts.put(key,n)};require(sum==saved.getLong("amount_won")){"배분 합계가 원래 지출과 같아야 합니다."};require(parts.has(category)){"대표 카테고리의 배분액도 입력해 주세요."};body.put("allocationsWon",parts)}
+  api.request("/v1/transactions/${saved.getString("id")}/classification","PUT",body)
   onCommitted();conflict=true
   adopt(JSONObject(api.request("/v1/transactions/"+saved.getString("id"))));onRefresh();onSaved()
  }}){Text("분류 저장")}},dismissButton={TextButton(enabled=!busy,onClick=onClose){Text("닫기")}})
