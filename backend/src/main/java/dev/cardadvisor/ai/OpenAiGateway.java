@@ -12,7 +12,7 @@ public class OpenAiGateway {
  private final String model;private final String key;private final boolean enabled;
  @org.springframework.beans.factory.annotation.Autowired
  public OpenAiGateway(ObjectMapper json,@Value("${openai.config-file:}")String path){
-  this.json=json;this.http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build();this.endpoint=URI.create("https://api.openai.com/v1/responses");
+  this.json=json.copy().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).enable(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION);this.http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build();this.endpoint=URI.create("https://api.openai.com/v1/responses");
   var p=new Properties();if(!path.isBlank())try(var input=Files.newInputStream(Path.of(path))){p.load(input);}catch(Exception e){throw new IllegalStateException("OPENAI_CONFIG_UNREADABLE");}
   model=p.getProperty("model","");String secret="";
   if(!p.getProperty("apiKeyFile","").isBlank())try{secret=Files.readString(Path.of(p.getProperty("apiKeyFile"))).strip();}catch(Exception e){throw new IllegalStateException("OPENAI_KEY_FILE_UNREADABLE");}
@@ -20,7 +20,7 @@ public class OpenAiGateway {
  }
  OpenAiGateway(ObjectMapper json,URI loopback){
   if(!Set.of("127.0.0.1","localhost","::1").contains(loopback.getHost()))throw new IllegalArgumentException("TEST_ENDPOINT_MUST_BE_LOOPBACK");
-  this.json=json;this.http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();this.endpoint=loopback;this.model="synthetic-contract-model";this.key="SYNTHETIC_KEY";this.enabled=true;
+  this.json=json.copy().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).enable(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION);this.http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();this.endpoint=loopback;this.model="synthetic-contract-model";this.key="SYNTHETIC_KEY";this.enabled=true;
  }
  static final class LimitedBody implements HttpResponse.BodySubscriber<byte[]> {
   private final java.util.concurrent.CompletableFuture<byte[]> body=new java.util.concurrent.CompletableFuture<>();
@@ -39,6 +39,7 @@ public class OpenAiGateway {
  public String version(){return model.isBlank()?"disabled":model;}
  public JsonNode select(String task,JsonNode facts,List<String> allowed)throws Exception{
   if(!enabled)throw new IllegalStateException("AI_DISABLED");
+  if(!Set.of("EXPLANATION","SPENDING_ANALYSIS","CLASSIFICATION").contains(task)||facts==null||!facts.isArray()||facts.size()>64||facts.toString().length()>16384||allowed==null||allowed.isEmpty()||allowed.size()>64||new HashSet<>(allowed).size()!=allowed.size()||allowed.stream().anyMatch(id->id==null||!id.matches("[A-Z0-9_]{1,80}")))throw new IllegalArgumentException("INVALID_AI_REQUEST");
   ObjectNode schema=json.createObjectNode();schema.put("type","object");schema.put("additionalProperties",false);
   var ids=schema.putObject("properties").putObject("ids");ids.put("type","array");var items=ids.putObject("items");items.put("type","string");var enums=items.putArray("enum");allowed.forEach(enums::add);schema.putArray("required").add("ids");
   var request=json.createObjectNode();request.put("model",model);request.put("store",false);request.put("max_output_tokens",400);

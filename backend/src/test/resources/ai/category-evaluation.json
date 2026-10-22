@@ -1,0 +1,602 @@
+[
+  {
+    "split": "development",
+    "merchant": "가상 무신사상점",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 네이버쇼핑몰",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 봄백화점",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 동네마트",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 올리브영매장",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 파란문구",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 달서점",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 네이버플러스가게",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 강커피",
+    "expected": "FOOD"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 나무카페",
+    "expected": "FOOD"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 해식당",
+    "expected": "FOOD"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 별음식점",
+    "expected": "FOOD"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 달치킨",
+    "expected": "FOOD"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 가든피자",
+    "expected": "FOOD"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 산베이커리",
+    "expected": "FOOD"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 blue coffee",
+    "expected": "FOOD"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 강택시",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 달철도",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 해지하철",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 나무고속버스",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 산주차장",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 파란교통",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 orange taxi",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 성주차",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 별관리비",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 달도시가스",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 해전기요금",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 산수도요금",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 강임대료",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 나무통신요금",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 A전기요금",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 B관리비",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 해병원",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 달약국",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 나무치과",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 산의원",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 강의료원",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 별병원",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 하얀약국",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 초록치과",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 해영화관",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 달시네마",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 나무미술관",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 산박물관",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 강볼링",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 별수영장",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 파란헬스",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 큰미술관",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 해정기구독",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 달멤버십",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 A넷플릭스",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 유튜브 프리미엄A",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 나무월정액",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 강정기구독",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 별멤버십",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 산월정액",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 해학원",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 달독서실",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 나무인터넷강의",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 산교육원",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 강온라인강의",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 별학원",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 바다독서실",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 파란교육원",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 해기부",
+    "expected": "OTHER"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 달후원",
+    "expected": "OTHER"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 나무자선",
+    "expected": "OTHER"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 산기부",
+    "expected": "OTHER"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 강후원",
+    "expected": "OTHER"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 별자선",
+    "expected": "OTHER"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 파란기부",
+    "expected": "OTHER"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 하얀후원",
+    "expected": "OTHER"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 결제대행A",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 카드대금출금",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 본인이체",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 원거래없는환불",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 병원카페복합점",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 A플랫폼",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 통합결제",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "development",
+    "merchant": "가상 정체불명점",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 은빛백화점",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 푸른서점",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 종합마트",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 옷가게",
+    "expected": "SHOPPING"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 새벽카페",
+    "expected": "FOOD"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 보리식당",
+    "expected": "FOOD"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 강변피자",
+    "expected": "FOOD"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 한식주방",
+    "expected": "FOOD"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 시내택시",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 중앙주차장",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 지방철도",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 시외버스",
+    "expected": "TRANSPORT"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 새도시관리비",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 우주임대료",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 통신요금청구",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 이동통신",
+    "expected": "HOUSING"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 중앙병원",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 서쪽약국",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 동쪽의료원",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 요양센터",
+    "expected": "HEALTH"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 새시네마",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 주말볼링",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 야외수영",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 공연극장",
+    "expected": "LEISURE"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 지식정기구독",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 영상멤버십",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 월정액서비스",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 유튜브 프리미엄B",
+    "expected": "SUBSCRIPTION"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 작은학원",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 조용한독서실",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 온라인강의몰",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 수학공부방",
+    "expected": "EDUCATION"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 지역기부",
+    "expected": "OTHER"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 장학후원",
+    "expected": "OTHER"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 겨울자선",
+    "expected": "OTHER"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 단체후원",
+    "expected": "OTHER"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 이체처리",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 환불대기",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 통합대행상점",
+    "expected": "UNCLASSIFIED"
+  },
+  {
+    "split": "evaluation",
+    "merchant": "합성 의원카페복합점",
+    "expected": "UNCLASSIFIED"
+  }
+]

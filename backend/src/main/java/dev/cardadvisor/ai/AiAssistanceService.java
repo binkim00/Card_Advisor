@@ -73,6 +73,6 @@ public class AiAssistanceService {
   return Map.of("category",corrected?current:suggested,"status","SUGGESTION_ONLY","classificationVersion",entry.get("classification_version"),"confidence","NOT_CALIBRATED","assistance",assistance);
  }
  private static String money(long n){return String.format(Locale.KOREA,"%,d원",n);}
- private static String safeCategory(String c){return Set.of("SHOPPING","FOOD","TRANSPORT","HOUSING","HEALTH","LEISURE","OTHER").contains(c)?c:"OTHER";}
- private static String safeLabel(String c){return Map.of("SHOPPING","쇼핑","FOOD","식비","TRANSPORT","교통","HOUSING","주거","HEALTH","의료","LEISURE","여가","OTHER","기타").getOrDefault(c,"기타");}
+ private static String safeCategory(String c){return dev.cardadvisor.domain.Categories.ALL.contains(c)?c:"OTHER";}
+ private static String safeLabel(String c){return Map.of("SHOPPING","쇼핑","FOOD","식비","TRANSPORT","교통","HOUSING","주거·통신","HEALTH","의료","LEISURE","여가","OTHER","기타","SUBSCRIPTION","구독","EDUCATION","교육","UNCLASSIFIED","미분류").getOrDefault(c,"기타");}
 }
