@@ -28,4 +28,26 @@ public final class ActualBenefitCalculator {
   }
   long cap=Math.multiplyExact(tier,16000L);return new Result(low==high?low:null,low==high?cap-low:null,low,high,cap,out);
  }
+ // Official bank-account TravelGO: two shared 5,000-won groups, not five separate caps.
+ public static final List<Area> GO_AREAS=List.of(
+  new Area("GO_CONVENIENCE","편의점 · 지정 오프라인 매장",0,500,10000),
+  new Area("GO_COFFEE","커피·베이커리 · 지정 오프라인 매장",0,500,10000),
+  new Area("GO_TRANSIT","버스·지하철 · 월 합계 5만원 이상",1,500,0),
+  new Area("GO_DIGITAL","지정 디지털 콘텐츠 정기결제",1,500,7000),
+  new Area("GO_UTILITIES","지정 통신·전기·가스 자동이체",1,500,50000));
+ public static Result go(int tier,List<Purchase> rows){
+  if(tier<0||tier>2)throw new IllegalArgumentException("INVALID_GO_TIER");
+  var balances=new ArrayList<Balance>();long[] lows=new long[2],highs=new long[2];
+  for(var area:GO_AREAS){var values=new ArrayList<Long>();long net=0;
+   for(var p:rows){if(p.netWon<0||p.netWon>p.originalWon)throw new IllegalArgumentException("INVALID_BENEFIT_NET");if(!area.id.equals(p.area)||p.netWon==0||p.netWon<area.minimumWon)continue;net=Math.addExact(net,p.netWon);values.add(Math.addExact(Math.multiplyExact(p.netWon,500L),5000)/10000);}
+   boolean eligible=tier>area.group&&(!area.id.equals("GO_TRANSIT")||net>=50000);
+   // Terms do not identify which five receipts win when more than five qualify; preserve bounds.
+   long low=eligible?values.stream().sorted().limit(5).mapToLong(Long::longValue).sum():0;
+   long high=eligible?values.stream().sorted(Comparator.reverseOrder()).limit(5).mapToLong(Long::longValue).sum():0;
+   lows[area.group]=Math.addExact(lows[area.group],low);highs[area.group]=Math.addExact(highs[area.group],high);
+   balances.add(new Balance(area.id,area.label,area.group,net,low,high,eligible,5000));
+  }
+  long low=Math.min(lows[0],5000)+Math.min(lows[1],5000),high=Math.min(highs[0],5000)+Math.min(highs[1],5000),cap=tier*5000L;
+  return new Result(low==high?low:null,low==high?cap-low:null,low,high,cap,balances);
+ }
 }

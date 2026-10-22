@@ -266,4 +266,11 @@ class FinancialSyncPostgresTest {
   assertThrows(org.springframework.dao.DataIntegrityViolationException.class,()->db.update("UPDATE financial_transactions SET ledger_id=? WHERE user_id=?",foreign,userA));
   var bad=new HashMap<>(input());bad.put("from",DATE.minusMonths(2).toString());assertEquals(422,req(a,"POST","/finance/connections/"+connection+"/sync",bad,UUID.randomUUID()).status());assertEquals(422,req(a,"POST","/finance/connections/"+connection+"/sync",input(),null).status());
  }
+ @Test void hanaGoSharedBenefitsAreExplicitAndCancellationNeedsReview()throws Exception{
+  connection=connect(a,"0313");sync(row("GO1","20000","0",""));String card=productCard(a,"HANA_TRAVELGO_BANK",dev.cardadvisor.domain.ActualCardRules.GO),m=DATE.toString().substring(0,7);
+  ok(req(a,"PUT","/finance/connections/"+connection+"/card-mappings",mappingBody(mappings(a).path("groups").get(0),card,0),null));
+  ok(req(a,"PUT","/cards/"+card+"/months/"+m,Map.of("untrackedPerformanceWon",200000,"currentQualified",true,"remainingCapWon",5000,"version",0),null));
+  var t=rows().get(0);assertEquals(5,benefitReview(t).path("areas").size());saveBenefit(t,"RULE","GO_COFFEE");benefitMonth(card,m,1,true);assertEquals(1000,benefit(card,m).path("estimatedUsedWon").asLong());assertEquals(4000,benefit(card,m).path("estimatedRemainingCapWon").asLong());
+  sync(row("GO1","20000","2","5000"));assertTrue(benefit(card,m).path("estimatedUsedWon").isNull());saveBenefit(t,"RULE","GO_COFFEE");assertEquals(750,benefit(card,m).path("estimatedUsedWon").asLong());sync(row("GO1","20000","2","5000"));assertEquals(1,count("ledger_entries"));assertEquals(1,count("cancellations"));
+ }
 }

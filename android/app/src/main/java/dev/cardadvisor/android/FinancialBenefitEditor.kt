@@ -44,8 +44,8 @@ import java.time.*
   }}
   summary?.let{s->DesignPanel{
    Text("$month 전체 혜택 계산 기준",style=MaterialTheme.typography.titleMedium)
-   if(review?.optString("productRule")?.contains("KB_EASY_ALL")==true){Text("이번 혜택에 적용되는 전월 실적 구간 · 당월 실적과 별도")
-    listOf(0 to "자격 미충족",1 to "50만~100만원 미만",2 to "100만~150만원 미만",3 to "150만원 이상").forEach{(value,label)->FilterChip(selected=tier==value,enabled=!busy&&!stale,onClick={tier=value},label={Text(label)},modifier=Modifier.testTag("benefitTier_$value"))}
+   if(review?.optString("productRule")?.let{it.contains("KB_EASY_ALL")||it.contains("TRAVELGO")}==true){Text("이번 혜택에 적용되는 전월 실적 구간 · 당월 실적과 별도")
+    (if(review?.optString("productRule")?.contains("TRAVELGO")==true)listOf(0 to "자격 미충족",1 to "20만~50만원 미만 · 최초 등록 우대 확인 포함",2 to "50만원 이상") else listOf(0 to "자격 미충족",1 to "50만~100만원 미만",2 to "100만~150만원 미만",3 to "150만원 이상")).forEach{(value,label)->FilterChip(selected=tier==value,enabled=!busy&&!stale,onClick={tier=value},label={Text(label)},modifier=Modifier.testTag("benefitTier_$value"))}
    }
    Row{Checkbox(coverage,{coverage=it},enabled=!busy&&!stale,modifier=Modifier.testTag("benefitCoverage"));Text("조회 기준 현재까지 이 카드의 해당 월 구매·취소 내역이 모두 기록된 것을 확인했습니다.",Modifier.weight(1f))}
    Text("누락 내역이 있거나 확인하지 않았다면 체크하지 마세요. 확인된 거래의 부분 계산과 월 전체 계산을 구분합니다.")
@@ -55,6 +55,7 @@ import java.time.*
    Text("미확인 ${s.getLong("unknownCount")}건 · 혜택 제외 ${s.getLong("excludedCount")}건")
    Text("확인된 범위의 혜택 ${s.getLong("confirmedLowerWon")}~${s.getLong("confirmedUpperWon")}원 · 소수점/동률 조건이 확정되지 않으면 전체값을 보류합니다.")
    val all=s.getJSONArray("areas");for(i in 0 until all.length()){val a=all.getJSONObject(i);if(a.getLong("netWon")>0)Text(a.getString("label")+" · 순사용 %,d원 · 예상 %d~%d원".format(a.getLong("netWon"),a.getLong("lowerBenefitWon"),a.getLong("upperBenefitWon")))}
+   if(review?.optString("productRule")?.contains("TRAVELGO")==true)Text("GO는 편의점·커피 그룹 5천원, 교통·디지털·생활비 그룹 5천원을 공유합니다. 영역별 월 5회이며 초과 거래의 적립 순서가 확인되지 않으면 범위로 표시합니다. 취소 접수월의 실제 환수·횟수 복원은 별도 확인이 필요합니다.")
    Text("사용자 확인에 따른 약관 추정입니다. 취소는 원구매 월의 예상치를 재계산하며 카드사 실제 적립·환수 시점과 즉시 복원된 한도를 뜻하지 않습니다. 공식 잔여 한도는 별도 미확인입니다.",style=MaterialTheme.typography.bodySmall)
   }}
  }} }
