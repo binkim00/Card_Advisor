@@ -1,6 +1,6 @@
 package dev.cardadvisor.android
 
-import android.app.Activity
+import androidx.activity.compose.LocalActivity
 import android.view.WindowManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -27,7 +27,7 @@ import java.util.UUID
  var mappingConnection by remember{mutableStateOf<String?>(null)}
  var syncConnection by remember{mutableStateOf<String?>(null)}
  var org by remember{mutableStateOf("")};var login by remember{mutableStateOf("")};var password by remember{mutableStateOf("")};var consent by remember{mutableStateOf(false)}
- val activity=LocalContext.current as Activity;val lifecycle=LocalLifecycleOwner.current.lifecycle
+ val activity=requireNotNull(LocalActivity.current);val lifecycle=LocalLifecycleOwner.current.lifecycle
  fun clear(){login="";password="";consent=false}
  DisposableEffect(lifecycle){
   val wasSecure=activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0

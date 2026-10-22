@@ -1,0 +1,6 @@
+# Copy privately to .local/android-signing.properties only when preparing a signed release.
+# Keystore path is relative to .local; never commit keys or passwords.
+storeFile=release.jks
+storePassword=REPLACE_LOCALLY
+keyAlias=REPLACE_LOCALLY
+keyPassword=REPLACE_LOCALLY

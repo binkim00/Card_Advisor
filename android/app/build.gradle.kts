@@ -1,8 +1,20 @@
+import java.util.Properties
 plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose") }
 android {
  namespace="dev.cardadvisor.android"
  compileSdk=35
  defaultConfig { applicationId="dev.cardadvisor.android"; minSdk=26; targetSdk=35; versionCode=1; versionName="0.1.0"; testInstrumentationRunner="androidx.test.runner.AndroidJUnitRunner" }
+ val signingFile=rootProject.file("../.local/android-signing.properties")
+ if(signingFile.isFile){
+  val values=Properties().apply { signingFile.inputStream().use { load(it) } }
+  fun secret(name:String)=requireNotNull(values.getProperty(name)?.takeIf { it.isNotBlank() && !it.startsWith("REPLACE_") }) { "Missing local signing setting: $name" }
+  signingConfigs.create("privateRelease") {
+   storeFile=signingFile.parentFile.resolve(secret("storeFile")).canonicalFile
+   require(storeFile!!.isFile) { "Local signing keystore is missing." }
+   storePassword=secret("storePassword");keyAlias=secret("keyAlias");keyPassword=secret("keyPassword")
+  }
+  buildTypes.getByName("release").signingConfig=signingConfigs.getByName("privateRelease")
+ }
  buildFeatures { compose=true; buildConfig=true }
  defaultConfig { buildConfigField("String","API_BASE_URL","\"http://127.0.0.1:18080\"") }
  buildTypes { getByName("release") {

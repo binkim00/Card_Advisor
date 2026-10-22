@@ -38,13 +38,13 @@ private fun displayWon(value: Long) = "%,d원".format(java.util.Locale.KOREA,val
     }
 }
 
-@Composable internal fun CheckoutOverview(order:String,points:String,money:String,busy:Boolean,paymentLabel:String="네이버페이 카드",onEdit:()->Unit){
+@Composable internal fun CheckoutOverview(order:String,points:String,money:String,busy:Boolean,paymentLabel:String="네이버페이 카드",categoryText:String="쇼핑",onEdit:()->Unit){
     DesignPanel{
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
             Text("수동 결제 정보",style=MaterialTheme.typography.titleMedium)
             TextButton(enabled=!busy,onClick=onEdit,contentPadding=PaddingValues(0.dp)){Text("결제 정보 수정")}
         }
-        Text(paymentLabel+" · 쇼핑",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+        Text(paymentLabel+" · "+categoryText,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
         val o=order.toLongOrNull();val p=points.toLongOrNull();val m=money.toLongOrNull()
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
             Text("카드 결제 예정액",style=MaterialTheme.typography.bodyMedium)

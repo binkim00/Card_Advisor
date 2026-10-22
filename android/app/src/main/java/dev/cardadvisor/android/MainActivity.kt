@@ -213,7 +213,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
       Row{Checkbox(factsConfirmed,{factsConfirmed=it;invalidate()},modifier=Modifier.testTag("actualFactsConfirmed"));Text("금액·국내 원화·구매 종류와 입력한 결제 조건을 확인했습니다.")}
       Text("실제 매입 업종·행사·취소 정산 결과에 따라 달라질 수 있습니다.",style=MaterialTheme.typography.bodySmall)
      }
-     CheckoutOverview(order,points,money,busy,paymentLabel=if(paymentMethod=="DIRECT_CARD")"일반 카드" else "네이버페이 카드"){checkoutExpanded=!checkoutExpanded}
+     CheckoutOverview(order,points,money,busy,paymentLabel=when(paymentMethod){"DIRECT_CARD"->"일반 카드";"NAVER_PAY_CARD"->"네이버페이 카드";else->"기타 결제수단"},categoryText=if(splitCategories)"여러 분류" else categoryLabel(checkoutCategory)){checkoutExpanded=!checkoutExpanded}
      if(checkoutExpanded) DesignPanel {
       PaymentFields(order,points,money,{order=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{points=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{money=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()})
       CheckoutConditions(checkoutCategory,paymentMethod,installmentMonths,splitApproval,splitCategories,checkoutAllocations,!busy,
