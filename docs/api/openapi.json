@@ -34,9 +34,13 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
-        "security": []
+        "security": [],
+        "parameters": []
       }
     },
     "/auth/register": {
@@ -57,6 +61,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -69,7 +76,8 @@
             }
           }
         },
-        "security": []
+        "security": [],
+        "parameters": []
       }
     },
     "/auth/login": {
@@ -90,6 +98,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -102,7 +113,8 @@
             }
           }
         },
-        "security": []
+        "security": [],
+        "parameters": []
       }
     },
     "/auth/logout": {
@@ -123,8 +135,12 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": []
       }
     },
     "/demo/setup": {
@@ -145,8 +161,12 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": []
       }
     },
     "/cards": {
@@ -167,8 +187,12 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": []
       },
       "post": {
         "summary": "가상 카드 신규 등록 및 현재 월 초기 스냅샷 생성",
@@ -187,6 +211,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -194,12 +221,13 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Card"
+                "$ref": "#/components/schemas/CardInput"
               }
             }
           }
         },
-        "description": "같은 ID 재등록은 409. 월별 입력값 변경에는 /cards/{id}/months/{month} 사용. GET /cards의 performanceWon은 재계산된 조회 값입니다."
+        "description": "같은 ID 재등록은 409. 월별 입력값 변경에는 /cards/{id}/months/{month} 사용. GET /cards의 performanceWon은 재계산된 조회 값입니다.",
+        "parameters": []
       }
     },
     "/budgets/{month}": {
@@ -237,6 +265,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       },
@@ -274,6 +305,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -318,6 +352,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "description": "사용자별 월 가계부. 기존 amount_won/net_won/card_net_won 계산 보존. 조회 전용 merchant_name, display_card_name, card_last_digits(3~4자리만), financial_status, financial_source 추가. 금융 연결 상품→공급자 표기 순서이며 금융 내역이 없을 때만 기존 card_name 사용. 누락값은 null. 금융/상품 JOIN은 사용자 귀속이며 원장 행을 증식하지 않는다. 카드번호/연결 식별자/인증정보 미노출. 표시 카드와 실적 계산 card_id는 별개."
@@ -341,6 +378,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -352,7 +392,8 @@
               }
             }
           }
-        }
+        },
+        "parameters": []
       }
     },
     "/transactions/{id}/cancellations": {
@@ -383,6 +424,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -415,6 +459,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -426,7 +473,8 @@
               }
             }
           }
-        }
+        },
+        "parameters": []
       }
     },
     "/checkout-sessions/{id}": {
@@ -457,6 +505,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -489,6 +540,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -500,7 +554,8 @@
               }
             }
           }
-        }
+        },
+        "parameters": []
       }
     },
     "/recommendations/{id}": {
@@ -531,6 +586,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       }
@@ -564,6 +622,17 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        }
+      },
+      "get": {
+        "summary": "로그인한 본인 계정과 동의 상태",
+        "responses": {
+          "200": {
+            "description": "본인 프로필"
           }
         }
       }
@@ -596,6 +665,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "parameters": [
@@ -629,6 +701,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -679,6 +754,9 @@
           },
           "422": {
             "description": "입력/계산 조건 오류"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -741,6 +819,9 @@
           },
           "422": {
             "description": "잘못된 분류/포함 여부/버전"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "description": "성공 시 재조회 가능한 거래를 반환한다. 순지출을 전체/카테고리 예산에 반영하고 사용자 데이터 버전을 올려 기존 추천을 무효화한다. 값이 같고 버전도 같으면 변경/버전 증가 없음."
@@ -782,6 +863,9 @@
           },
           "422": {
             "description": "잘못된 분류/포함 여부/버전"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "description": "성공 시 재조회 가능한 거래를 반환한다. 순지출을 전체/카테고리 예산에 반영하고 사용자 데이터 버전을 올려 기존 추천을 무효화한다. 값이 같고 버전도 같으면 변경/버전 증가 없음. 원문 명세 호환 별칭. 부분 필드 생략은 지원하지 않는다."
@@ -815,6 +899,9 @@
           },
           "422": {
             "description": "잘못된 분류/포함 여부/버전"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "description": "classification_version, classification_updated_at, category, included, original_category, original_included, 원금액·순지출·카드 연결 정보를 반환한다."
@@ -848,6 +935,9 @@
           },
           "422": {
             "description": "잘못된 분류/포함 여부/버전"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "description": "month,totalWon,spentWon,remainingWon,fixedRemainingWon,availableWon,categories[] 반환. 카테고리별 category,limitWon,spentWon,remainingWon. 미설정 카테고리 한도/잔액은null. 포함된 거래의 원금액−취소액만 집계; 실적·혜택과 독립."
@@ -888,6 +978,9 @@
           },
           "422": {
             "description": "필수값/금액/일자 오류, 다른 월 거래, 중지 일정 연결"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "description": "해당 월 이하의 가장 최근 규칙으로 발생건을 계산한다. 예정일 말일 보정. inactive 잔액0. active 잔액=max(예상액−예산 포함 연결 거래의 순지출,0). 예산 없는 월은 appliedRemainingWon=null."
@@ -926,9 +1019,13 @@
           },
           "422": {
             "description": "필수값/금액/일자 오류, 다른 월 거래, 중지 일정 연결"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
-        "description": "effectiveMonth 이전 규칙을 보존하며 같은 월 규칙은 교체. 이후에 이미 지정한 변경은 보존. 새 거래 생성/자동결제 없음. 사용자 버전 갱신으로 이전 추천 무효화."
+        "description": "effectiveMonth 이전 규칙을 보존하며 같은 월 규칙은 교체. 이후에 이미 지정한 변경은 보존. 새 거래 생성/자동결제 없음. 사용자 버전 갱신으로 이전 추천 무효화.",
+        "parameters": []
       }
     },
     "/fixed-costs/{id}/months/{month}/links": {
@@ -984,6 +1081,9 @@
           },
           "422": {
             "description": "필수값/금액/일자 오류, 다른 월 거래, 중지 일정 연결"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "description": "한 거래 한 일정만, 같은 구매 월·같은 사용자만 연결. 여러 거래를 하나의 일정에 연결 가능. 금액/가계부 포함 여부/카드 실적·혜택은 변경하지 않는다. 동일 버전의 이미 같은 연결 상태는 무변경. 취소·분류 변경 때 예약액을 조회 시 재계산."
@@ -1015,8 +1115,12 @@
           },
           "401": {
             "description": "유효한 앱 세션 필요"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": []
       }
     },
     "/finance/connections": {
@@ -1031,8 +1135,12 @@
           },
           "404": {
             "description": "본인 리소스 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": []
       },
       "post": {
         "summary": "개인카드 ID/PW 연결 생성",
@@ -1057,6 +1165,9 @@
           },
           "503": {
             "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "parameters": [
@@ -1138,8 +1249,22 @@
           },
           "404": {
             "description": "본인 리소스 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
       }
     },
     "/finance/operations/{id}": {
@@ -1165,8 +1290,22 @@
           },
           "404": {
             "description": "본인 리소스 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
       }
     },
     "/finance/connections/{id}/reauthorize": {
@@ -1204,12 +1343,24 @@
           },
           "503": {
             "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "parameters": [
           {
             "name": "Idempotency-Key",
             "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
@@ -1297,12 +1448,24 @@
           },
           "503": {
             "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "parameters": [
           {
             "name": "Idempotency-Key",
             "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
@@ -1351,6 +1514,15 @@
           {
             "name": "Idempotency-Key",
             "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
@@ -1406,6 +1578,9 @@
           },
           "503": {
             "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       }
@@ -1442,8 +1617,22 @@
           },
           "503": {
             "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
       }
     },
     "/finance/connections/{id}/transactions": {
@@ -1478,8 +1667,22 @@
           },
           "503": {
             "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
       }
     },
     "/finance/transactions/{id}/resolve": {
@@ -1553,8 +1756,22 @@
           },
           "503": {
             "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
       }
     },
     "/finance/connections/{id}/sync-runs": {
@@ -1589,9 +1806,23 @@
           },
           "503": {
             "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
-        "description": "응답 유실·재로그인 이후 저장된 상태 복구용. 외부 공급자를 다시 호출하지 않는다. HTTP200은 동기화 성공을 뜻하지 않으며 각 status를 확인한다."
+        "description": "응답 유실·재로그인 이후 저장된 상태 복구용. 외부 공급자를 다시 호출하지 않는다. HTTP200은 동기화 성공을 뜻하지 않으며 각 status를 확인한다.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
       }
     },
     "/finance/connections/{id}/retry": {
@@ -1629,12 +1860,24 @@
           },
           "503": {
             "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "parameters": [
           {
             "name": "Idempotency-Key",
             "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
@@ -1712,9 +1955,22 @@
           },
           "404": {
             "description": "사용자 소유 연결 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1752,8 +2008,12 @@
           },
           "503": {
             "description": "고정 오류 코드와 허용된 providerHttpStatus 숫자만 반환"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": []
       }
     },
     "/finance/connections/{id}/card-mappings": {
@@ -1780,8 +2040,22 @@
           },
           "404": {
             "description": "Not owned or absent connection"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
       },
       "put": {
         "security": [
@@ -1815,8 +2089,22 @@
           },
           "404": {
             "description": "Owned card/group/connection not found"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
       },
       "parameters": [
         {
@@ -1830,7 +2118,7 @@
         }
       ]
     },
-    "/v1/finance/transactions/{id}/performance-review": {
+    "/finance/transactions/{id}/performance-review": {
       "get": {
         "summary": "Get effective INCLUDE / EXCLUDE / UNKNOWN with versions, rule source and cancellation receipt dates",
         "parameters": [
@@ -1864,6 +2152,9 @@
           },
           "422": {
             "description": "Mapping, confirmation, facts or receipt date invalid"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       },
@@ -1900,6 +2191,9 @@
           },
           "422": {
             "description": "Mapping, confirmation, facts or receipt date invalid"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -1914,7 +2208,7 @@
         }
       }
     },
-    "/v1/cards/{id}/financial-performance": {
+    "/cards/{id}/financial-performance": {
       "get": {
         "summary": "Month-specific financial contribution and incomplete coverage counts",
         "parameters": [
@@ -1957,11 +2251,14 @@
           },
           "422": {
             "description": "Mapping, confirmation, facts or receipt date invalid"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       }
     },
-    "/v1/finance/transactions/{id}/benefit-review": {
+    "/finance/transactions/{id}/benefit-review": {
       "get": {
         "summary": "Read effective transaction benefit review",
         "parameters": [
@@ -2001,11 +2298,14 @@
           },
           "503": {
             "description": "Required external transport is unavailable"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       },
       "put": {
-        "summary": "Confirm benefit conditions independently of performance and budget",
+        "summary": "혜택 인정·제외·미확인 검토 저장",
         "parameters": [
           {
             "name": "id",
@@ -2043,6 +2343,9 @@
           },
           "503": {
             "description": "Required external transport is unavailable"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -2050,52 +2353,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "expectedVersion",
-                  "expectedTransactionVersion",
-                  "expectedMappingVersion",
-                  "decision",
-                  "area",
-                  "conditionsConfirmed"
-                ],
-                "properties": {
-                  "expectedVersion": {
-                    "type": "integer"
-                  },
-                  "expectedTransactionVersion": {
-                    "type": "integer"
-                  },
-                  "expectedMappingVersion": {
-                    "type": "integer"
-                  },
-                  "decision": {
-                    "type": "string",
-                    "enum": [
-                      "RULE",
-                      "EXCLUDE",
-                      "UNKNOWN"
-                    ]
-                  },
-                  "area": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "conditionsConfirmed": {
-                    "type": "boolean",
-                    "const": true
-                  }
-                },
-                "additionalProperties": false
+                "$ref": "#/components/schemas/BenefitReview"
               }
             }
           }
         }
       }
     },
-    "/v1/cards/{id}/financial-benefits": {
+    "/cards/{id}/financial-benefits": {
       "get": {
         "summary": "Estimated original-purchase-month benefit usage/caps; official cap remains unknown",
         "parameters": [
@@ -2144,11 +2409,14 @@
           },
           "503": {
             "description": "Required external transport is unavailable"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       },
       "put": {
-        "summary": "Confirm current qualification tier and data coverage",
+        "summary": "현재 자격과 해당 월 혜택 검토 범위 저장",
         "parameters": [
           {
             "name": "id",
@@ -2195,6 +2463,9 @@
           },
           "503": {
             "description": "Required external transport is unavailable"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -2202,37 +2473,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "expectedVersion",
-                  "expectedQualificationVersion",
-                  "tier",
-                  "coverageConfirmed"
-                ],
-                "properties": {
-                  "expectedVersion": {
-                    "type": "integer"
-                  },
-                  "expectedQualificationVersion": {
-                    "type": "integer"
-                  },
-                  "tier": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 3
-                  },
-                  "coverageConfirmed": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
+                "$ref": "#/components/schemas/BenefitMonth"
               }
             }
           }
         }
       }
     },
-    "/v1/me/email-verification": {
+    "/me/email-verification": {
       "get": {
         "summary": "Email ownership status and mail readiness",
         "parameters": [],
@@ -2262,11 +2510,14 @@
           },
           "503": {
             "description": "Required external transport is unavailable"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       }
     },
-    "/v1/me/email-verification/request": {
+    "/me/email-verification/request": {
       "post": {
         "summary": "Deliver single-use code to account mailbox; no code in response",
         "parameters": [],
@@ -2296,13 +2547,16 @@
           },
           "503": {
             "description": "Required external transport is unavailable"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       }
     },
-    "/v1/me/email-verification/confirm": {
+    "/me/email-verification/confirm": {
       "post": {
-        "summary": "Confirm owner email",
+        "summary": "이메일 소유 확인 토큰 제출",
         "parameters": [],
         "security": [
           {
@@ -2330,6 +2584,9 @@
           },
           "503": {
             "description": "Required external transport is unavailable"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -2338,24 +2595,25 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "token"
-                ],
+                "additionalProperties": false,
                 "properties": {
                   "token": {
-                    "type": "string"
+                    "type": "string",
+                    "writeOnly": true
                   }
                 },
-                "additionalProperties": false
+                "required": [
+                  "token"
+                ]
               }
             }
           }
         }
       }
     },
-    "/v1/auth/password-reset/request": {
+    "/auth/password-reset/request": {
       "post": {
-        "summary": "Accept reset request without revealing email existence",
+        "summary": "계정 존재를 공개하지 않는 복구 메일 요청",
         "parameters": [],
         "security": [],
         "responses": {
@@ -2379,6 +2637,9 @@
           },
           "503": {
             "description": "Required external transport is unavailable"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -2387,25 +2648,25 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email"
-                ],
+                "additionalProperties": false,
                 "properties": {
                   "email": {
                     "type": "string",
                     "format": "email"
                   }
                 },
-                "additionalProperties": false
+                "required": [
+                  "email"
+                ]
               }
             }
           }
         }
       }
     },
-    "/v1/auth/password-reset/confirm": {
+    "/auth/password-reset/confirm": {
       "post": {
-        "summary": "Consume code and revoke all sessions while preserving data",
+        "summary": "일회용 토큰으로 비밀번호 변경과 모든 세션 폐기",
         "parameters": [],
         "security": [],
         "responses": {
@@ -2429,6 +2690,9 @@
           },
           "503": {
             "description": "Required external transport is unavailable"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         },
         "requestBody": {
@@ -2437,28 +2701,30 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "token",
-                  "newPassword"
-                ],
+                "additionalProperties": false,
                 "properties": {
                   "token": {
-                    "type": "string"
+                    "type": "string",
+                    "writeOnly": true
                   },
                   "newPassword": {
                     "type": "string",
                     "minLength": 12,
-                    "maxLength": 128
+                    "maxLength": 128,
+                    "writeOnly": true
                   }
                 },
-                "additionalProperties": false
+                "required": [
+                  "token",
+                  "newPassword"
+                ]
               }
             }
           }
         }
       }
     },
-    "/v1/transactions/{id}/classification-history": {
+    "/transactions/{id}/classification-history": {
       "get": {
         "summary": "본인 거래 분류 변경 이력",
         "parameters": [
@@ -2478,11 +2744,14 @@
           },
           "404": {
             "description": "본인 거래 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
         }
       }
     },
-    "/v1/dashboard": {
+    "/dashboard": {
       "get": {
         "summary": "동일 시점 가계부·실적·예산 조회",
         "description": "본인 인증 필수. 조회 결과에 금융 인증정보 없음. month=YYYY-MM 필수, ledger/performance/budget/revision 응답.",
@@ -2495,13 +2764,27 @@
           },
           "409": {
             "description": "버전 또는 요청 충돌"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}$"
+            }
+          }
+        ]
       }
     },
-    "/v1/finance/connections/{id}/reconcile": {
+    "/finance/connections/{id}/reconcile": {
       "post": {
-        "summary": "CODEF 공식 등록 목록을 통한 보류 연결 대조",
+        "summary": "공식 계정 목록과 결과 불명확 상태 대조",
         "description": "본인 인증 필수. 조회 결과에 금융 인증정보 없음. expectedVersion 및 UUID Idempotency-Key 필수. CID 없는 최초 연결은 지원 확인 보류. 등록 존재는 인증 성공을 뜻하지 않음.",
         "responses": {
           "200": {
@@ -2512,8 +2795,371 @@
           },
           "409": {
             "description": "버전 또는 요청 충돌"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
           }
-        }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "expectedVersion"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "갱신 토큰 회전; 재사용 시 세션 폐기",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "refreshToken": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "refreshToken"
+                ]
+              }
+            }
+          }
+        },
+        "security": [],
+        "parameters": []
+      }
+    },
+    "/card-products": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "공식 출처·규칙 버전과 지원 범위가 있는 상품 목록",
+        "parameters": []
+      }
+    },
+    "/cards/from-product": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "실제 상품을 사용자 카드에 등록",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "productId": {
+                    "type": "string"
+                  },
+                  "expectedRuleVersion": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "productId",
+                  "expectedRuleVersion"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/me/preferences": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "현재 목적별 동의와 버전",
+        "parameters": []
+      }
+    },
+    "/me/consents/{purpose}": {
+      "put": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "목적별 동의·철회",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "accepted": {
+                    "type": "boolean"
+                  },
+                  "policyVersion": {
+                    "type": "string"
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "accepted",
+                  "policyVersion",
+                  "expectedVersion"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "purpose",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "AI",
+                "CHECKOUT_DETECTION"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/me/deletion": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "비밀번호 재확인 후 계정 삭제; 금융 해제 우선",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "writeOnly": true
+                  },
+                  "confirmation": {
+                    "const": "계정 삭제",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "password",
+                  "confirmation"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/insights": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "실제 계산값·기간 비교·확인 전 예산 제안",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}$"
+            }
+          }
+        ]
+      }
+    },
+    "/recommendations/{id}/explanation": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "유효한 추천의 검증된 사실에 한정한 설명",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/transactions/{id}/classification-suggestion": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "사용자 수정·기억한 가맹점·로컬 단서 순서의 제안",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/transactions/{id}/classification-rule": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "가맹점 분류 기억 조회; 이름이 불명확하면 available=false",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "put": {
+        "responses": {
+          "200": {
+            "description": "처리 결과. 금융 상태는 응답의 state/status로 확인한다."
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        },
+        "summary": "명시적으로 기억/해제; category=null은 해제, 기존 거래 불변",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MerchantRule"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
       }
     }
   },
@@ -2553,8 +3199,7 @@
             "format": "uuid"
           },
           "name": {
-            "type": "string",
-            "pattern": "^\\[가상\\]"
+            "type": "string"
           },
           "rateBp": {
             "type": "integer",
@@ -2596,7 +3241,7 @@
           },
           "source": {
             "type": "string",
-            "const": "SYNTHETIC"
+            "description": "SYNTHETIC 또는 검증한 실제 상품 규칙 버전. 공식 실적 조회 결과를 의미하지 않는다."
           }
         },
         "required": [
@@ -2627,7 +3272,7 @@
               "minimum": 0,
               "maximum": 100000000
             },
-            "description": "SHOPPING/FOOD/TRANSPORT/HOUSING/HEALTH/LEISURE/OTHER. 기존 비표준 키 보존 가능. 전체 맵 교체. 키 생략은 미설정, 명시적 0은 0원 한도. 합은 totalWon 이하."
+            "description": "10개 표준 카테고리. 전체 맵 교체, 생략은 미설정·0은 명시 한도. 합계는 전체 예산 이하."
           },
           "fixedRemainingWon": {
             "type": "integer",
@@ -2693,6 +3338,9 @@
             "minimum": 0,
             "maximum": 10000000,
             "description": "포인트·유상머니를 제외한 카드 승인액. amountWon(예산 지출액) 이하."
+          },
+          "purchaseFacts": {
+            "$ref": "#/components/schemas/PurchaseFacts"
           }
         },
         "required": [
@@ -2724,6 +3372,13 @@
             ],
             "minimum": 0,
             "description": "카드 환불액. 순수 카드 거래는 생략 시 취소액과 동일. 혼합 결제는 명시 필수."
+          },
+          "receivedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
           }
         },
         "required": [
@@ -2753,10 +3408,27 @@
             "minimum": 0
           },
           "category": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "SHOPPING",
+              "FOOD",
+              "TRANSPORT",
+              "HOUSING",
+              "HEALTH",
+              "LEISURE",
+              "OTHER",
+              "SUBSCRIPTION",
+              "EDUCATION",
+              "UNCLASSIFIED"
+            ]
           },
           "paymentMethod": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "DIRECT_CARD",
+              "NAVER_PAY_CARD",
+              "OTHER"
+            ]
           },
           "installments": {
             "type": "integer",
@@ -2764,10 +3436,43 @@
             "maximum": 60
           },
           "splitApproval": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "NO",
+              "YES",
+              "UNKNOWN"
+            ]
           },
           "confirmedByUser": {
             "type": "boolean"
+          },
+          "allocationsWon": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "propertyNames": {
+              "enum": [
+                "SHOPPING",
+                "FOOD",
+                "TRANSPORT",
+                "HOUSING",
+                "HEALTH",
+                "LEISURE",
+                "OTHER",
+                "SUBSCRIPTION",
+                "EDUCATION",
+                "UNCLASSIFIED"
+              ]
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "취소 전 원래 예산 지출을 배분. 합계는 cardChargeWon+prepaidMoneyUsedWon(원장 분류에서는 amountWon)과 같아야 한다. 서버가 부분 취소를 비례 배분한다."
+          },
+          "purchaseFacts": {
+            "$ref": "#/components/schemas/PurchaseFacts"
           }
         },
         "required": [
@@ -3106,7 +3811,18 @@
         "properties": {
           "category": {
             "type": "string",
-            "description": "SHOPPING/FOOD/TRANSPORT/HOUSING/HEALTH/LEISURE/OTHER. 기존 비표준 분류는 그대로 유지하며 포함 여부만 수정할 수 있다."
+            "enum": [
+              "SHOPPING",
+              "FOOD",
+              "TRANSPORT",
+              "HOUSING",
+              "HEALTH",
+              "LEISURE",
+              "OTHER",
+              "SUBSCRIPTION",
+              "EDUCATION",
+              "UNCLASSIFIED"
+            ]
           },
           "included": {
             "type": "boolean"
@@ -3114,6 +3830,31 @@
           "version": {
             "type": "integer",
             "minimum": 1
+          },
+          "allocationsWon": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "propertyNames": {
+              "enum": [
+                "SHOPPING",
+                "FOOD",
+                "TRANSPORT",
+                "HOUSING",
+                "HEALTH",
+                "LEISURE",
+                "OTHER",
+                "SUBSCRIPTION",
+                "EDUCATION",
+                "UNCLASSIFIED"
+              ]
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "취소 전 원래 예산 지출을 배분. 합계는 cardChargeWon+prepaidMoneyUsedWon(원장 분류에서는 amountWon)과 같아야 한다. 서버가 부분 취소를 비례 배분한다."
           }
         },
         "description": "금액·원구매일·카드·혜택 규칙은 변경하지 않는다. 분류 전용 버전이며 취소/카드 연결 버전과 독립적이다."
@@ -3156,7 +3897,10 @@
               "HOUSING",
               "HEALTH",
               "LEISURE",
-              "OTHER"
+              "OTHER",
+              "SUBSCRIPTION",
+              "EDUCATION",
+              "UNCLASSIFIED"
             ]
           },
           "dayOfMonth": {
@@ -3193,12 +3937,20 @@
           },
           "linked": {
             "type": "boolean",
-            "description": "true 연결 / false 해제. 한 거래는 한 일정의 같은 구매 월에만 연결."
+            "description": "true 연결/변경, false 이 일정·월 연결만 해제. 다른 월·복수 일정 허용."
           },
           "version": {
             "type": "integer",
             "minimum": 1,
             "description": "조회한 일정 버전. 일정/거래 연결 변경 모두 증가."
+          },
+          "allocatedWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "description": "취소 전 배정액. 생략은 원거래 전액. 모든 월·일정 배정 합계가 원거래 amountWon 이하."
           }
         }
       },
@@ -3311,9 +4063,11 @@
         "properties": {
           "cardId": {
             "description": "Owned registered actual card; null unlinks only the association.",
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           },
           "expectedConnectionVersion": {
             "type": "integer",
@@ -3399,6 +4153,251 @@
             }
           }
         }
+      },
+      "PurchaseFacts": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "merchant": {
+            "type": "string",
+            "enum": [
+              "NAVER_PLUS_STORE",
+              "MUSINSA"
+            ]
+          },
+          "purchaseKind": {
+            "type": "string",
+            "enum": [
+              "GENERAL_GOODS",
+              "GIFT_CARD",
+              "PREPAID_TOPUP",
+              "TAX",
+              "PUBLIC_UTILITY",
+              "EDUCATION",
+              "INSURANCE"
+            ]
+          },
+          "confirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "merchant",
+          "purchaseKind",
+          "confirmed"
+        ]
+      },
+      "MerchantRule": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "SHOPPING",
+              "FOOD",
+              "TRANSPORT",
+              "HOUSING",
+              "HEALTH",
+              "LEISURE",
+              "OTHER",
+              "SUBSCRIPTION",
+              "EDUCATION",
+              "UNCLASSIFIED",
+              null
+            ]
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "confirmed": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "category",
+          "expectedVersion",
+          "confirmed"
+        ]
+      },
+      "BenefitReview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedTransactionVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedMappingVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "decision": {
+            "enum": [
+              "RULE",
+              "EXCLUDE",
+              "UNKNOWN"
+            ]
+          },
+          "area": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conditionsConfirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "expectedTransactionVersion",
+          "expectedMappingVersion",
+          "decision",
+          "area",
+          "conditionsConfirmed"
+        ]
+      },
+      "BenefitMonth": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedQualificationVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tier": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "coverageConfirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "expectedQualificationVersion",
+          "tier",
+          "coverageConfirmed"
+        ]
+      },
+      "Dashboard": {
+        "type": "object",
+        "required": [
+          "userId",
+          "revision",
+          "ledger",
+          "performance",
+          "budget"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ledger": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "performance": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "budget": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "CardInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^\\[가상\\]"
+          },
+          "rateBp": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "qualified": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "performanceWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "targetWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "remainingCapWon": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "performanceEligible": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "const": "SYNTHETIC"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "rateBp",
+          "qualified",
+          "performanceWon",
+          "targetWon",
+          "remainingCapWon",
+          "performanceEligible",
+          "source"
+        ]
       }
     }
   },
@@ -3410,7 +4409,10 @@
     "field": "provider_code",
     "privacy": "No provider message, extraMessage, request credentials, or raw response is retained.",
     "pattern": "^CF-[0-9]{5}$",
-    "nullable": true
+    "type": [
+      "string",
+      "null"
+    ]
   },
   "x-financial-performance": {
     "reviewValidity": [

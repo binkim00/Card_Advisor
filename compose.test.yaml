@@ -1,0 +1,17 @@
+name: card-advisor-test
+services:
+  db:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: card_advisor_test
+      POSTGRES_USER: synthetic
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:?Run prepare-test-db.ps1}
+    ports: ["127.0.0.1:54330:5432"]
+    volumes: ["test_pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synthetic -d card_advisor_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+volumes:
+  test_pg:

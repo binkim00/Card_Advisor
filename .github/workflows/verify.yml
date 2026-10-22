@@ -1,0 +1,58 @@
+name: Verify without financial credentials
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_DB: advisor_test
+          POSTGRES_USER: synthetic
+          POSTGRES_PASSWORD: synthetic-ci-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U synthetic -d advisor_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DB_URL: jdbc:postgresql://127.0.0.1:5432/advisor_test
+      DB_USER: synthetic
+      DB_PASSWORD: synthetic-ci-only
+      RUN_SERVICE_PG_TESTS: 'true'
+      RUN_FINANCE_PG_TESTS: 'true'
+      RUN_ACCOUNT_PG_TESTS: 'true'
+      CODEF_CONFIG_FILE: ''
+      CODEF_STORAGE_KEY_FILE: ''
+      OPENAI_CONFIG_FILE: ''
+      ACCOUNT_MAIL_CONFIG_FILE: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Domain, HTTP, PostgreSQL, synthetic providers, TLS
+        working-directory: backend
+        run: mvn -B -ntp '-Dtest=*Test,!Android*Test,!Live*Test' test
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: '8.14.3'
+      - name: Unit tests, lint, debug and unsigned release
+        run: gradle -p android :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease --console=plain
+# No secrets, deployment, publishing, actual provider calls, or store upload jobs.
