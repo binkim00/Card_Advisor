@@ -9,3 +9,10 @@ V29 `actual_qualification_facts`: 전월 마감 인정액·출처·확인일·�
 검증: 연말·다음 달 말 경계, 정확한 구간, 미확인/음수 실적, 유예 중 상위 구간의 단위4 검사. 합성 PostgreSQL 저장/재조회·다른 사용자·구버전·출처·미래일·마감 전 확인일·다음 달 실적 보존·구간 모순 검사. 첫 검사에서 nullable Boolean 자동 언박싱 오류를 발견해 명시적 Boolean 반환으로 수정, 실패 검사6 재통과. 최종 관련45 검사 통과 기록은 `.run/qualification-final-test.log`.
 
 Android 빌드/JVM 통과. 에뮬레이터에서 최초 입력→유예1구간 저장→재시작 재조회→다른 요청으로2구간 저장→기존 화면 충돌/입력 보존을 HTTP와 DB로 확인. `.run/qualification-android.json`, `.run/qualification-emulator.log` 통과. 실제 금융 호출0, 휴대폰 조작0, 개인 DB 수정0.
+
+## 과거 월의 확인일 수정
+과거 월의 전월 인정액을 오늘 명세서에서 확인해 입력하면 422로 거절되던 문제를 합성 HTTP→PG 검사로 재현했다. 자격 대상 월의 말일을 확인일 상한으로 잘못 사용하던 조건을 제거했다. 이전 실적 월의 마감 전 날짜와 미래 확인일은 계속 거절한다. 최초 사용 등록일의 기간 검증은 유지한다.
+
+실패 재현1건 후 관련 단위4·금융 PG44(합계48, 실패/오류/skip0) 통과. 과거 월 저장·재조회·DB 확인일, 현재 월 실적/자격·원장 수 보존, 잘못된 확인일 요청 후 버전 불변을 확인했다. `.run/qualification-historical-red.log`, `.run/qualification-historical-green.log`.
+
+최종 코드를 패키징해 원 API18080에 반영했고 health UP·V29를 확인했다. 계정/세션/카드/예산/거래 등 기존10표의 서버 내 행 해시가 동일하다. 원장187·금융190·상품매핑1, `.run/financial-runtime-preservation.json`. 개인 행 원문은 출력하지 않았고 실제 외부 금융 호출은 하지 않았다.
