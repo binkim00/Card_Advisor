@@ -17,7 +17,7 @@ public class FinancialPerformanceService {
  public FinancialPerformanceService(JdbcTemplate db){this.db=db;}
  public record RefundDate(UUID cancellationId,LocalDate receiptDate){}
  public record Input(Long expectedVersion,Long expectedTransactionVersion,Long expectedMappingVersion,String decision,Boolean confirmed,List<RefundDate> refunds){}
- public record Contribution(Long amountWon,long confirmedSubtotalWon,long includedCount,long excludedCount,long unknownCount,long unknownRefundDateCount,boolean hasEvidence){}
+ public record Contribution(Long amountWon,long confirmedSubtotalWon,long includedCount,long excludedCount,long unknownCount,long unknownRefundDateCount,boolean hasEvidence,long unknownRefundRuleCount,String calculationVersion){}
  private long n(Object v){return ((Number)v).longValue();}
  private void lock(UUID u){if(db.queryForList("SELECT id FROM app_users WHERE id=? FOR UPDATE",u).isEmpty())throw new ApiError(401,"SESSION_EXPIRED");}
  Map<String,Object> approval(UUID u,UUID id){
@@ -32,7 +32,7 @@ public class FinancialPerformanceService {
  private Map<String,Object> saved(UUID u,UUID id){var rows=db.queryForList("SELECT * FROM financial_performance_reviews WHERE user_id=? AND transaction_id=?",u,id);return rows.isEmpty()?null:rows.get(0);}
  private boolean valid(Map<String,Object> t,Map<String,Object> s,List<Map<String,Object>> refunds){return s!=null&&Objects.equals(s.get("card_id"),t.get("mapped_card_id"))&&Objects.equals(s.get("mapping_version"),t.get("mapping_version"))&&Objects.equals(s.get("rule_version"),t.get("product_rule"))&&Arrays.equals((byte[])s.get("transaction_fingerprint"),(byte[])t.get("fingerprint"))&&Objects.equals(s.get("refund_signature"),signature(refunds))&&"APPLIED".equals(t.get("status"));}
  public Map<String,Object> get(UUID u,UUID id){lock(u);var t=approval(u,id);var f=refunds(u,id);var s=saved(u,id);boolean valid=valid(t,s,f);var out=new LinkedHashMap<String,Object>();
-  out.put("transactionId",id);out.put("cardId",t.get("mapped_card_id"));out.put("transactionVersion",t.get("version"));out.put("mappingVersion",t.get("mapping_version"));out.put("version",s==null?0:s.get("version"));out.put("decision",valid?s.get("decision"):"UNKNOWN");out.put("reviewCurrent",valid);out.put("ruleVersion",t.get("product_rule"));out.put("source","USER_CONFIRMED_TERMS_ESTIMATE");out.put("purchaseDate",t.get("used_date"));out.put("amountWon",t.get("amount_won"));
+  out.put("transactionId",id);out.put("cardId",t.get("mapped_card_id"));out.put("transactionVersion",t.get("version"));out.put("mappingVersion",t.get("mapping_version"));out.put("version",s==null?0:s.get("version"));out.put("decision",valid?s.get("decision"):"UNKNOWN");out.put("reviewCurrent",valid);out.put("ruleVersion",t.get("product_rule"));out.put("source","USER_CONFIRMED_TERMS_ESTIMATE");out.put("refundAttributionPolicy",ActualCardRules.KB.equals(t.get("product_rule"))?"RECEIPT_MONTH":"UNVERIFIED");out.put("purchaseDate",t.get("used_date"));out.put("amountWon",t.get("amount_won"));
   out.put("refunds",f.stream().map(r->{var x=new LinkedHashMap<String,Object>();x.put("cancellationId",r.get("cancellation_id"));x.put("amountWon",r.get("amount_won"));x.put("earliestDate",r.get("earliest_date"));x.put("receiptDate",r.get("receipt_date"));return x;}).toList());return out;
  }
  public Map<String,Object> save(UUID u,UUID id,Input in){lock(u);var t=approval(u,id);var old=saved(u,id);var f=refunds(u,id);
@@ -52,17 +52,18 @@ public class FinancialPerformanceService {
   db.update("UPDATE app_users SET revision=revision+1 WHERE id=?",u);return get(u,id);
  }
  public Contribution contribution(UUID u,UUID card,LocalDate month){
-  long known=0,inc=0,exc=0,unknown=0,unknownDates=0;boolean has=false;
+  long known=0,inc=0,exc=0,unknown=0,unknownDates=0,unknownRules=0;boolean has=false;
   var ids=db.queryForList("SELECT t.id FROM financial_transactions t JOIN financial_card_mappings m ON m.user_id=t.user_id AND m.connection_id=t.connection_id AND m.source_mask=t.card_mask AND m.source_label=COALESCE(t.card_label,'') WHERE t.user_id=? AND m.card_id=? AND t.kind='APPROVAL' AND t.status<>'IGNORED' AND (t.used_date IS NULL OR t.used_date<?)",UUID.class,u,card,month.plusMonths(1));
   for(UUID id:ids){var t=approval(u,id);var f=refunds(u,id);LocalDate used=t.get("used_date")==null?null:((java.sql.Date)t.get("used_date")).toLocalDate();boolean purchase=used==null||YearMonth.from(used).equals(YearMonth.from(month));
-   boolean refundRelevant=f.stream().anyMatch(r->r.get("receipt_date")==null||YearMonth.from(((java.sql.Date)r.get("receipt_date")).toLocalDate()).equals(YearMonth.from(month)));
+   boolean unverifiedRefundPolicy=!ActualCardRules.KB.equals(t.get("product_rule"))&&!f.isEmpty();
+   boolean refundRelevant=unverifiedRefundPolicy||f.stream().anyMatch(r->r.get("receipt_date")==null||YearMonth.from(((java.sql.Date)r.get("receipt_date")).toLocalDate()).equals(YearMonth.from(month)));
    if(!purchase&&!refundRelevant)continue;has=true;var s=saved(u,id);String decision=valid(t,s,f)?(String)s.get("decision"):"UNKNOWN";
    if(decision.equals("EXCLUDE")){exc++;continue;}if(decision.equals("UNKNOWN")){unknown++;continue;}
-   inc++;if(purchase){if(used==null||t.get("amount_won")==null){unknown++;continue;}known=Math.addExact(known,n(t.get("amount_won")));}
+   inc++;if(unverifiedRefundPolicy){unknown++;unknownRules++;unknownDates+=f.stream().filter(r->r.get("receipt_date")==null).count();continue;}if(purchase){if(used==null||t.get("amount_won")==null){unknown++;continue;}known=Math.addExact(known,n(t.get("amount_won")));}
    for(var refund:f){if(refund.get("receipt_date")==null){unknownDates++;continue;}LocalDate date=((java.sql.Date)refund.get("receipt_date")).toLocalDate();if(YearMonth.from(date).equals(YearMonth.from(month))){if(!ActualCardRules.KB.equals(t.get("product_rule"))){unknown++;continue;}known=Math.subtractExact(known,n(refund.get("amount_won")));}}
   }
   long unmatched=db.queryForObject("SELECT count(*) FROM financial_transactions t JOIN financial_card_mappings m ON m.user_id=t.user_id AND m.connection_id=t.connection_id AND m.source_mask=t.card_mask AND m.source_label=COALESCE(t.card_label,'') WHERE t.user_id=? AND m.card_id=? AND t.kind='CANCEL_EVENT' AND t.status NOT IN('APPLIED','IGNORED') AND (t.used_date IS NULL OR t.used_date<?)",Long.class,u,card,month.plusMonths(1));unknown+=unmatched;has|=unmatched>0;
-  return new Contribution(unknown==0&&unknownDates==0?known:null,known,inc,exc,unknown,unknownDates,has);
+  return new Contribution(unknown==0&&unknownDates==0?known:null,known,inc,exc,unknown,unknownDates,has,unknownRules,"PERFORMANCE_20261022_REFUND_POLICY");
  }
  public Object summary(UUID u,UUID card,String month){lock(u);if(db.queryForObject("SELECT count(*) FROM cards WHERE user_id=? AND id=?",Long.class,u,card)==0)throw new ApiError(404,"CARD_NOT_FOUND");LocalDate date;try{date=YearMonth.parse(month).atDay(1);}catch(Exception e){throw new ApiError(422,"INVALID_MONTH");}return contribution(u,card,date);}
 }

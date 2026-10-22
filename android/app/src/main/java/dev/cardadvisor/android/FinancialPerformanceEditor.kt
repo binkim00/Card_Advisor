@@ -40,7 +40,7 @@ import java.time.*
     DesignPanel{
      Text("원구매 · "+v.getString("purchaseDate"));Text(if(v.isNull("amountWon"))"승인액 미확인" else "승인액 %,d원".format(v.getLong("amountWon")),style=MaterialTheme.typography.titleLarge)
      Text("확인 버전 "+v.getLong("version")+" · 사용자 확인에 따른 약관 추정",Modifier.testTag("performanceVersion"))
-     Text("실적 인정 여부는 예산 포함 여부와 별개입니다. 할부는 승인 총액을 기준으로 확인합니다.")
+     Text("실적 인정 여부는 예산 포함 여부와 별개입니다. KB 할부는 승인 총액 기준이며, 하나 체크카드의 할부 자료는 인정하지 않습니다.")
      listOf("INCLUDE" to "실적 인정", "EXCLUDE" to "실적 제외", "UNKNOWN" to "미확인으로 보류").forEach{(key,label)->
       FilterChip(selected=decision==key,enabled=!busy&&!stale,onClick={decision=key;confirmed=false},label={Text(label)},modifier=Modifier.testTag("performanceDecision_"+key))
      }
@@ -54,7 +54,7 @@ import java.time.*
       OutlinedTextField(dates[id]?:"",{dates=dates+(id to it);confirmed=false},label={Text("취소 접수일 · YYYY-MM-DD")},singleLine=true,enabled=!busy&&!stale,modifier=Modifier.fillMaxWidth().testTag("performanceRefundDate_$i"))
      }
     }
-    Text("KB는 취소 접수 월의 실적에서 차감합니다. 다른 상품의 취소 귀속 규칙이 미검증이면 계산을 보류합니다.")
+    Text(if(v.optString("refundAttributionPolicy")=="RECEIPT_MONTH")"KB는 확인한 취소 접수 월의 실적에서 차감합니다." else "이 상품은 취소 금액을 어느 달 실적에서 빼는지 공식 규칙 확인이 필요합니다. 접수일을 입력해도 원구매 월 이후 영향을 배제할 수 없는 실적은 미확인으로 유지합니다. 예산과 이번 혜택 자격은 변경하지 않습니다.")
     Row{Checkbox(confirmed,{confirmed=it},enabled=!busy&&!stale,modifier=Modifier.testTag("performanceConfirm"));Text("약관에 따른 인정·제외와 입력한 취소 접수일을 직접 확인했습니다.",Modifier.weight(1f))}
     val datesValid=dates.values.all{it.isBlank()||runCatching{LocalDate.parse(it)}.isSuccess}
     Button(enabled=!busy&&!stale&&confirmed&&datesValid,onClick={action(true){
@@ -68,6 +68,7 @@ import java.time.*
     Text(if(c.isNull("amountWon"))"금융 실적 전체: 미확인" else "금융 실적 전체: %,d원".format(c.getLong("amountWon")),Modifier.testTag("performanceContribution"))
     Text("확인된 부분 합계: %,d원".format(c.getLong("confirmedSubtotalWon")))
     Text("인정 ${c.getLong("includedCount")} · 제외 ${c.getLong("excludedCount")} · 미확인 ${c.getLong("unknownCount")} · 접수일 미확인 ${c.getLong("unknownRefundDateCount")}")
+    if(c.optLong("unknownRefundRuleCount",0)>0)Text("취소 실적 규칙 미확인: ${c.getLong("unknownRefundRuleCount")}건 · 날짜 입력만으로 해결되지 않습니다.",Modifier.testTag("performanceRefundPolicyPending"))
     Text("부분 합계는 월 전체 실적이 아닙니다. 미확인은 0원으로 계산하지 않습니다.")
    }}
    state?.let{s->DesignPanel{

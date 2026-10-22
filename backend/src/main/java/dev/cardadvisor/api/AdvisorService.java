@@ -223,7 +223,7 @@ public class AdvisorService {
  private void requireManualManagement(UUID user,UUID id,Map<String,Object> entry){
   if(entry.get("source").equals("CODEF")||db.queryForObject("SELECT count(*) FROM financial_transactions WHERE user_id=? AND ledger_id=?",Long.class,user,id)>0)throw new ApiError(409,"PROVIDER_TRANSACTION_MANAGED");
  }
- public static final String RULE_SET_VERSION="CALCULATION_20261022_MULTI_CATEGORY";
+ public static final String RULE_SET_VERSION="CALCULATION_20261022_REFUND_POLICY";
  public Map<String,Object> checkout(UUID u,Checkout c){lock(u);UUID id=UUID.randomUUID();db.update("INSERT INTO checkouts(id,user_id,payload,version,expires_at) VALUES (?,?,?::jsonb,1,now()+interval '2 minutes')",id,u,json(c));return Map.of("id",id,"snapshotVersion",1,"context",c);}
  public record UpdateCheckout(long expectedVersion,Checkout context){}
  public Map<String,Object> updateCheckout(UUID u,UUID id,UpdateCheckout input){lock(u);var old=one("SELECT version FROM checkouts WHERE user_id=? AND id=?",u,id);long v=((Number)old.get("version")).longValue();if(v!=input.expectedVersion())throw new ApiError(409,"VERSION_CONFLICT");
