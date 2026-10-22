@@ -9,12 +9,12 @@ private fun JSONObject.nullString(name:String):String? { require(has(name));retu
 private fun JSONObject.exactLong(name:String):Long { val v=get(name);require(v is Number && v.toString().matches(Regex("-?[0-9]+")));return v.toString().toLong() }
 private fun JSONObject.nullLong(name:String):Long? { require(has(name));return if(isNull(name))null else exactLong(name) }
 internal fun <T> syncList(raw:String,parse:(JSONObject)->T):List<T>{val a=JSONArray(raw);return (0 until a.length()).map{parse(a.getJSONObject(it))}}
-internal data class SyncRun(val id:String,val connection:String,val from:String,val to:String,val status:String,val received:Long,val applied:Long,val held:Long){
+internal data class SyncRun(val id:String,val connection:String,val from:String,val to:String,val status:String,val received:Long,val applied:Long,val held:Long,val authVersion:Long?=null,val authMethod:String?=null,val authExpires:String?=null){
  companion object{fun parse(j:JSONObject):SyncRun {
-  val s=j.getString("status");require(s in listOf("RUNNING","IMPORTED","PARTIAL","FAILED"))
+  val s=j.getString("status");require(s in listOf("RUNNING","IMPORTED","PARTIAL","FAILED","AUTH_REQUIRED","AUTH_PENDING","AUTH_UNKNOWN"))
   val f=j.getString("from_date");val t=j.getString("to_date");require(!LocalDate.parse(f).isAfter(LocalDate.parse(t)))
   val received=j.exactLong("received");val applied=j.exactLong("applied");val held=j.exactLong("held");require(received>=0&&applied>=0&&held>=0&&applied+held<=received)
-  return SyncRun(j.uuid("id"),j.uuid("connection_id"),f,t,s,received,applied,held)
+  val auth=j.optJSONObject("authentication");val method=auth?.getString("method");require(method==null||method in listOf("smsAuthNo","emailAuthNo","simpleAuth"));val version=auth?.exactLong("version");require(version==null||version>0);return SyncRun(j.uuid("id"),j.uuid("connection_id"),f,t,s,received,applied,held,version,method,auth?.getString("expires_at"))
  }}
 }
 internal data class FinancialRow(val id:String,val connection:String,val date:String?,val card:String?,val kind:String,val amount:Long?,val refund:Long?,val currency:String?,val payment:String?,val installments:Long?,val status:String,val issue:String?,val version:Long,val ledger:String?,val original:String?,val source:String,val merchant:String?=null,val cardLabel:String?=null,val mappedCardName:String?=null){
@@ -56,6 +56,9 @@ internal fun syncIssue(code:String?)=when(code){
 internal fun syncOutcome(status:String)=when(status){
  "IMPORTED"->"이 기간에 조회된 이용내역을 가계부에 기록했습니다."
  "PARTIAL"->"이용내역을 불러왔습니다. 확인이 필요한 내역이 있습니다."
+ "AUTH_REQUIRED"->"추가 인증이 필요합니다. 아래 인증 안내를 확인해 주세요."
+ "AUTH_PENDING"->"인증 결과를 확인 중입니다. 다시 전송하지 말고 내역을 새로고침해 주세요."
+ "AUTH_UNKNOWN"->"인증 결과를 확인하지 못했습니다. 인증번호를 다시 보내지 말고 잠시 후 내역을 새로고침해 주세요."
  "FAILED"->"동기화가 실패했습니다. 저장된 결과를 확인한 뒤 다시 요청해 주세요."
  else->"동기화 처리 중입니다. 새 요청 대신 저장된 결과를 조회해 주세요."
 }

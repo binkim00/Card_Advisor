@@ -55,7 +55,7 @@ import java.util.UUID
  LaunchedEffect(connectionId){refresh()}
  benefitTransaction?.let{id->FinancialBenefitEditor(api,id,onBusyChanged=onBusyChanged,onChanged={onInvalidated();onChanged()},onClose={benefitTransaction=null});return}
  performanceTransaction?.let{id->FinancialPerformanceEditor(api,id,onBusyChanged=onBusyChanged,onChanged={onInvalidated();onChanged()},onClose={performanceTransaction=null});return}
- val running=runs.any{it.status=="RUNNING"}
+ val running=runs.any{it.status in listOf("RUNNING","AUTH_REQUIRED","AUTH_PENDING","AUTH_UNKNOWN")}
  val enabled=!busy&&!stale&&!expired
  val datesValid=runCatching{val f=LocalDate.parse(from);val t=LocalDate.parse(to);!f.isAfter(t)&&!t.isAfter(today)&&!t.isAfter(f.plusDays(30))}.getOrDefault(false)
  Text("카드 이용내역",style=MaterialTheme.typography.titleLarge)
@@ -84,7 +84,13 @@ import java.util.UUID
   action(true){stale=true;onInvalidated();val r=SyncRun.parse(JSONObject(api.request("/v1/finance/connections/$connectionId/sync","POST",body,key)));require(r.connection==connectionId);load();notice=syncOutcome(r.status)}
  },modifier=Modifier.fillMaxWidth().heightIn(min=50.dp).testTag("syncStart")){Text("이 기간 이용내역 불러오기")}
  }
- runs.firstOrNull()?.let{r->Text("최근 요청 ${r.from} ~ ${r.to} · "+when(r.status){"IMPORTED"->"가계부 기록 완료";"PARTIAL"->"확인할 내역 있음";"FAILED"->"실패";else->"처리 중"},Modifier.testTag("syncRun"));Text("조회한 내역 ${r.received}건 · 가계부에 기록 ${r.applied}건 · 확인 필요 ${r.held}건")}
+ runs.firstOrNull()?.let{r->Text("최근 요청 ${r.from} ~ ${r.to} · "+when(r.status){"IMPORTED"->"가계부 기록 완료";"PARTIAL"->"확인할 내역 있음";"FAILED"->"실패";"AUTH_REQUIRED"->"추가 인증 필요";"AUTH_UNKNOWN"->"인증 결과 확인 필요";else->"처리 중"},Modifier.testTag("syncRun"));Text("조회한 내역 ${r.received}건 · 가계부에 기록 ${r.applied}건 · 확인 필요 ${r.held}건")}
+ runs.firstOrNull{it.status in listOf("AUTH_REQUIRED","AUTH_PENDING","AUTH_UNKNOWN")}?.let{r->
+  FinanceSyncAuthentication(r,enabled&&providerReady){answer->
+   val body=JSONObject().put("expectedVersion",r.authVersion).put("answer",answer)
+   action(true){try{stale=true;val result=SyncRun.parse(JSONObject(api.request("/v1/finance/sync-runs/${r.id}/authenticate","POST",body,UUID.randomUUID().toString())));require(result.id==r.id&&result.connection==connectionId);load();notice=syncOutcome(result.status)}finally{body.remove("answer")}}
+  }
+ }
  Row{Checkbox(heldOnly,{heldOnly=it},enabled=!busy,modifier=Modifier.testTag("syncHeldOnly"));Text("확인 필요한 내역만 보기")}
  val displayed=rows.filter{!heldOnly||it.held}.sortedByDescending{it.date}
  if(!stale&&displayed.isEmpty())Text(if(heldOnly)"확인이 필요한 내역이 없습니다." else "저장된 거래가 없습니다.",Modifier.testTag("syncEmpty"))

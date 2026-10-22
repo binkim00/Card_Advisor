@@ -3161,6 +3161,80 @@
           }
         ]
       }
+    },
+    "/finance/sync-runs/{id}/authenticate": {
+      "post": {
+        "summary": "CODEF 조회 추가 인증 재개",
+        "description": "최대31일의 명시적 조회. 자동 페이지/주기 호출 없음. 인증정보 없이 저장된 Connected ID 사용.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion",
+                  "answer"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer"
+                  },
+                  "answer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "writeOnly": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "status를 확인: RUNNING/IMPORTED/PARTIAL/FAILED. HTTP 성공은 동기화 성공과 다름."
+          },
+          "401": {
+            "description": "로그인 필요"
+          },
+          "404": {
+            "description": "본인 리소스 없음"
+          },
+          "409": {
+            "description": "키·버전·상태 충돌 또는 재확인 필요"
+          },
+          "422": {
+            "description": "기간·기관·확인 입력 오류"
+          },
+          "503": {
+            "description": "공급자 비활성/저장 키 없음"
+          },
+          "default": {
+            "description": "error.code: 401 로그인 만료, 404 본인 자료 없음, 409 버전·조건 충돌, 422 입력 조건, 429 요청 제한, 503 외부 연결 불가. 원문/비밀 미포함."
+          }
+        }
+      }
     }
   },
   "components": {

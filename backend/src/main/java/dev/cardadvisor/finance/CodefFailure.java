@@ -4,6 +4,9 @@ package dev.cardadvisor.finance;
 public final class CodefFailure extends RuntimeException {
  public enum Kind { DISABLED, CONFIGURATION, AUTHENTICATION, ACCESS_DENIED, RATE_LIMITED,
   AUTH_REQUIRED, REJECTED, INVALID_RESPONSE, TRANSPORT, UNKNOWN_OUTCOME, INTERRUPTED }
+ private CodefChallenge challenge;
+ public CodefChallenge challenge(){return challenge;}
+ CodefFailure withChallenge(CodefChallenge value){challenge=value;return this;}
  public final Kind kind;
  public final Integer httpStatus;
  public final String providerCode;

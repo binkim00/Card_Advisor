@@ -167,6 +167,29 @@ class FinancialSyncPostgresTest {
   sync(row("AI2","50000","2",""));comparison=ok(req(a,"GET","/insights?month="+DATE.toString().substring(0,7),null,null)).path("comparison");assertTrue(comparison.path("differenceWon").isNull());assertEquals(90000,comparison.path("knownCurrentWon").asLong());assertEquals("PARTIAL_KNOWN_TRANSACTIONS",comparison.path("status").asText());
  }
  String otherAccount()throws Exception{if("OTHER_TEST_ACCOUNT".equals(b)){b=register();userB=users.get(users.size()-1);}return b;}
+ JsonNode authChallenge(String method){return JSON.createObjectNode().put("method",method).put("jobIndex",0).put("threadIndex",0).put("jti","PRIVATE_CANARY").put("twoWayTimestamp",System.currentTimeMillis()).put("phoneNo","PRIVATE_CANARY");}
+ JsonNode pendingAuth(String method)throws Exception{var behavior=response(authChallenge(method));behavior.code="CF-03002";var r=ok(req(a,"POST","/finance/connections/"+connection+"/sync",input(),UUID.randomUUID()));assertEquals("AUTH_REQUIRED",r.path("status").asText());return r;}
+ Reply answer(String token,JsonNode r,UUID key)throws Exception{return req(token,"POST","/finance/sync-runs/"+r.path("id").asText()+"/authenticate",Map.of("expectedVersion",r.at("/authentication/version").asLong(),"answer",r.at("/authentication/method").asText().equals("simpleAuth")?"1":"123456"),key);}
+ @Test void twoWayResumeEncryptedIsolatedAndIdempotent()throws Exception{
+  var r=pendingAuth("smsAuthNo");assertEquals(0,count("ledger_entries"));var stored=db.queryForMap("SELECT * FROM financial_sync_auth WHERE user_id=?",userA);assertNotNull(stored.get("ciphertext"));assertFalse(new String((byte[])stored.get("ciphertext"),java.nio.charset.StandardCharsets.UTF_8).contains("PRIVATE_CANARY"));
+  assertEquals(404,answer(b,r,UUID.randomUUID()).status());assertEquals(409,req(a,"POST","/finance/connections/"+connection+"/sync",input(),UUID.randomUUID()).status());
+  response(row("AUTH1","50000","0",""));UUID key=UUID.randomUUID();assertEquals("IMPORTED",ok(answer(a,r,key)).path("status").asText());int calls=provider.calls.size();assertEquals("IMPORTED",ok(answer(a,r,key)).path("status").asText());assertEquals(calls,provider.calls.size());assertEquals(1,count("ledger_entries"));assertNull(db.queryForObject("SELECT ciphertext FROM financial_sync_auth WHERE user_id=?",byte[].class,userA));sync(row("AUTH1","50000","0",""));assertEquals(1,count("ledger_entries"));
+ }
+ @Test void repeatedChallengeRequiresNewVersionAndExplicitAnswer()throws Exception{
+  var first=pendingAuth("smsAuthNo");var response=response(authChallenge("simpleAuth"));response.code="CF-03002";UUID key=UUID.randomUUID();var next=ok(answer(a,first,key));assertEquals(2,next.at("/authentication/version").asLong());assertEquals("AUTH_REQUIRED",next.path("status").asText());int calls=provider.calls.size();ok(answer(a,first,key));assertEquals(calls,provider.calls.size());assertEquals(409,answer(a,first,UUID.randomUUID()).status());response(row("AUTH2","20000","0",""));assertEquals("IMPORTED",ok(answer(a,next,UUID.randomUUID())).path("status").asText());
+ }
+ @Test void authExpiryPurgesCiphertextAndDoesNotSendAnswer()throws Exception{
+  var r=pendingAuth("emailAuthNo");db.update("UPDATE financial_sync_auth SET expires_at=now()-interval '1 second' WHERE user_id=?",userA);int calls=provider.calls.size();var expired=ok(req(a,"GET","/finance/sync-runs/"+r.path("id").asText(),null,null));assertEquals("FAILED",expired.path("status").asText());assertEquals("CODEF_AUTH_EXPIRED",expired.path("error_code").asText());assertEquals(409,answer(a,r,UUID.randomUUID()).status());assertEquals(calls,provider.calls.size());assertNull(db.queryForObject("SELECT ciphertext FROM financial_sync_auth WHERE user_id=?",byte[].class,userA));
+ }
+ @Test void ambiguousAuthNeverReplaysAndPreservesLedger()throws Exception{
+  var r=pendingAuth("smsAuthNo");var fail=response(JSON.createArrayNode());fail.status=500;UUID key=UUID.randomUUID();assertEquals("AUTH_UNKNOWN",ok(answer(a,r,key)).path("status").asText());int calls=provider.calls.size();ok(answer(a,r,key));assertEquals(409,answer(a,r,UUID.randomUUID()).status());assertEquals(409,req(a,"POST","/finance/connections/"+connection+"/sync",input(),UUID.randomUUID()).status());assertEquals(calls,provider.calls.size());assertEquals(0,count("ledger_entries"));
+ }
+ @Test void changedConnectionCannotConsumeChallenge()throws Exception{
+  var r=pendingAuth("simpleAuth");db.update("UPDATE financial_connections SET version=version+1 WHERE user_id=?",userA);int calls=provider.calls.size();assertEquals(409,answer(a,r,UUID.randomUUID()).status());assertEquals(calls,provider.calls.size());assertEquals(0,count("ledger_entries"));
+ }
+ @Test void invalidAnswerLeavesChallengeAvailable()throws Exception{
+  var r=pendingAuth("smsAuthNo");int calls=provider.calls.size();assertEquals(422,req(a,"POST","/finance/sync-runs/"+r.path("id").asText()+"/authenticate",Map.of("expectedVersion",1,"answer","not an OTP"),UUID.randomUUID()).status());assertEquals(calls,provider.calls.size());assertEquals("AUTH_REQUIRED",ok(req(a,"GET","/finance/sync-runs/"+r.path("id").asText(),null,null)).path("status").asText());
+ }
  @BeforeEach void setup()throws Exception{db.update("DELETE FROM request_limits WHERE bucket_hash=?",dev.cardadvisor.auth.Passwords.sha("auth-ip:synthetic-finance:127.0.0.1:"+(java.time.Instant.now().getEpochSecond()/60)));provider.calls.clear();provider.behaviors.clear();a=register();userA=users.get(0);b="OTHER_TEST_ACCOUNT";connection=connect(a,"0301");}
  @AfterEach void cleanup(){for(UUID u:users)db.update("DELETE FROM app_users WHERE id=?",u);for(UUID u:users)assertEquals(0L,db.queryForObject("SELECT count(*) FROM app_users WHERE id=?",Long.class,u));}
  Map<String,Object> input(){return Map.of("from",DATE.toString(),"to",LocalDate.now(ZoneId.of("Asia/Seoul")).toString(),"expectedVersion",2);}

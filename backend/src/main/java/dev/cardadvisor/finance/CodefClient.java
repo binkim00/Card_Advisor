@@ -133,6 +133,13 @@ public final class CodefClient {
   var request=lookup(cid,organization,birthDate);request.put("startDate",from.format(DateTimeFormatter.BASIC_ISO_DATE));request.put("endDate",to.format(DateTimeFormatter.BASIC_ISO_DATE));request.putAll(options);
   return new UnmappedData(call("/v1/kr/card/p/account/approval-list",request,false));
  }
+ public UnmappedData continueApprovals(String cid,String organization,LocalDate from,LocalDate to,CodefChallenge challenge,char[] answer){
+  if(challenge==null)throw new CodefFailure(CONFIGURATION);
+  var request=lookup(cid,organization,"");request.put("startDate",from.format(DateTimeFormatter.BASIC_ISO_DATE));request.put("endDate",to.format(DateTimeFormatter.BASIC_ISO_DATE));
+  request.putAll(Map.of("inquiryType","1","orderBy","1","memberStoreInfoType","0"));request.putAll(challenge.parameters(answer));
+  // An authentication attempt must never be replayed, including after token expiry.
+  return new UnmappedData(call("/v1/kr/card/p/account/approval-list",request,true));
+ }
  private Map<String,Object> lookup(String cid,String organization,String birthDate){
   connected(cid);institution(organization);if(birthDate==null||!birthDate.matches("(?:[0-9]{6}|[0-9]{8})?"))throw new CodefFailure(CONFIGURATION);
   return new LinkedHashMap<>(Map.of("connectedId",cid,"organization",organization,"birthDate",birthDate));
@@ -163,7 +170,7 @@ public final class CodefClient {
    String code=envelope.path("result").path("code").asText("");
    if(code.equals("CF-00401")){invalidate(used);if(!mutation&&attempt==0)continue;throw new CodefFailure(AUTHENTICATION,status,code);}
    if(code.equals("CF-00403"))throw new CodefFailure(ACCESS_DENIED,status,code);
-   if(code.equals("CF-03002"))throw new CodefFailure(AUTH_REQUIRED,status,code);
+   if(code.equals("CF-03002"))throw new CodefFailure(AUTH_REQUIRED,status,code).withChallenge(path.equals("/v1/kr/card/p/account/approval-list")?CodefChallenge.parse(envelope.path("data")):null);
    if(code.isBlank())throw new CodefFailure(mutation?UNKNOWN_OUTCOME:INVALID_RESPONSE);
    if(!code.equals("CF-00000"))throw new CodefFailure(REJECTED,status,code);
    if(!envelope.hasNonNull("data")||!(envelope.get("data").isObject()||envelope.get("data").isArray()))throw new CodefFailure(mutation?UNKNOWN_OUTCOME:INVALID_RESPONSE);

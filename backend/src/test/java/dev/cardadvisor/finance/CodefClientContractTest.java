@@ -88,6 +88,18 @@ class CodefClientContractTest {
  @Test void providerInvalidTokenReadRetriesOnce(){reply(200,envelope("CF-00401","{}"));reply(200,envelope("CF-00000","{}"));client.accounts("synthetic-cid");assertEquals(2,tokens);}
  @Test void repeatedInvalidTokenStops(){reply(401,MARKER);reply(401,MARKER);fail(AUTHENTICATION,()->client.accounts("synthetic-cid"));assertEquals(2,tokens);}
  @Test void invalidTokenMutationIsNeverReplayed(){reply(401,MARKER);try(var login=login()){fail(AUTHENTICATION,()->client.create(login));}assertEquals(1,tokens);assertEquals(2,requests.size());}
+ @Test void documentedTwoWayUsesSameEndpointAndOnlyWhitelistedFields()throws Exception{
+  var data=json.createObjectNode().put("method","smsAuthNo").put("jobIndex",0).put("threadIndex",1).put("jti",MARKER).put("twoWayTimestamp",1234567890L).put("phoneNo",MARKER);
+  reply(200,envelope("CF-03002",data.toString()));var failure=fail(AUTH_REQUIRED,()->client.approvals("synthetic-cid","0301","",LocalDate.now(),LocalDate.now(),Map.of()));assertNotNull(failure.challenge());assertFalse(failure.challenge().toString().contains(MARKER));assertFalse(failure.challenge().sealedPayload().contains("phoneNo"));
+  reply(200,envelope("CF-00000","[]"));client.continueApprovals("synthetic-cid","0301",LocalDate.now(),LocalDate.now(),failure.challenge(),"123456".toCharArray());var body=decoded(2);assertTrue(body.path("is2Way").asBoolean());assertEquals(1234567890L,body.at("/twoWayInfo/twoWayTimestamp").asLong());assertEquals("123456",body.path("smsAuthNo").asText());assertEquals(requests.get(1).path,requests.get(2).path);assertFalse(body.has("phoneNo"));
+ }
+ @Test void authContinuationCannotAutomaticallyRetryExpiredToken(){
+  var c=CodefChallenge.parse(json.createObjectNode().put("method","simpleAuth").put("jobIndex",0).put("threadIndex",0).put("jti",MARKER).put("twoWayTimestamp",1));reply(401,"synthetic");fail(AUTHENTICATION,()->client.continueApprovals("synthetic-cid","0301",LocalDate.now(),LocalDate.now(),c,"1".toCharArray()));assertEquals(2,requests.size());
+ }
+ @Test void unsupportedOrMalformedChallengeNeverAcceptsArbitraryFields(){
+  assertNull(CodefChallenge.parse(json.createObjectNode().put("method","secureCard")));assertNull(CodefChallenge.parse(json.createObjectNode().put("method","smsAuthNo")));
+  var c=CodefChallenge.parse(json.createObjectNode().put("method","simpleAuth").put("jobIndex",0).put("threadIndex",0).put("jti",MARKER).put("twoWayTimestamp",1));fail(CONFIGURATION,()->c.parameters("0000".toCharArray()));assertTrue(requests.isEmpty());
+ }
  @Test void additionalAuthStopsWithoutAutomaticContinuation(){reply(200,envelope("CF-03002","{\"continue2Way\":true,\"twoWayInfo\":{}}"));fail(AUTH_REQUIRED,()->client.accounts("synthetic-cid"));assertEquals(2,requests.size());}
  @ParameterizedTest @ValueSource(ints={403,429,500,302}) void httpErrorsNeverBecomeSuccess(int status){reply(status,MARKER);var expected=status==403?ACCESS_DENIED:status==429?RATE_LIMITED:TRANSPORT;fail(expected,()->client.accounts("synthetic-cid"));assertEquals(2,requests.size());}
  @ParameterizedTest @ValueSource(strings={"{}","not-json","{\"result\":{\"code\":\"CF-00000\"}}","{\"result\":{\"code\":\"CF-00000\"},\"data\":null}"}) void missingDataIsNotEmptySuccess(String body){reply(200,body);fail(INVALID_RESPONSE,()->client.accounts("synthetic-cid"));}

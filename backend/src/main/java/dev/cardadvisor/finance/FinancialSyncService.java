@@ -23,14 +23,14 @@ public class FinancialSyncService {
  }
  private void changed(UUID user){db.update("UPDATE app_users SET revision=revision+1 WHERE id=?",user);}
  private long number(Object value){return ((Number)value).longValue();}
- public Map<String,Object> run(UUID user,UUID id){return one("financial_sync_runs",user,id);}
- public List<Map<String,Object>> runs(UUID user,UUID connection){one("financial_connections",user,connection);return db.queryForList("SELECT * FROM financial_sync_runs WHERE user_id=? AND connection_id=? ORDER BY created_at DESC,id DESC LIMIT 20",user,connection);}
+ public Map<String,Object> run(UUID user,UUID id){return tx.execute(status->{lock(user);expireAuth(user);var result=new LinkedHashMap<>(one("financial_sync_runs",user,id));var auth=db.queryForList("SELECT version,method,expires_at FROM financial_sync_auth WHERE user_id=? AND run_id=?",user,id);result.put("authentication",auth.isEmpty()?null:auth.get(0));return result;});}
+ public List<Map<String,Object>> runs(UUID user,UUID connection){one("financial_connections",user,connection);return db.queryForList("SELECT id FROM financial_sync_runs WHERE user_id=? AND connection_id=? ORDER BY created_at DESC,id DESC LIMIT 20",UUID.class,user,connection).stream().map(id->run(user,id)).toList();}
  public List<Map<String,Object>> transactions(UUID user,UUID connection){one("financial_connections",user,connection);return db.queryForList("SELECT t.*,c.payload->>'name' AS mapped_card_name FROM financial_transactions t LEFT JOIN financial_card_mappings m ON m.user_id=t.user_id AND m.connection_id=t.connection_id AND m.source_mask=t.card_mask AND m.source_label=COALESCE(t.card_label,'') LEFT JOIN cards c ON c.user_id=m.user_id AND c.id=m.card_id WHERE t.user_id=? AND t.connection_id=? ORDER BY t.used_date,t.id",user,connection).stream().map(this::publicRow).toList();}
  private Map<String,Object> publicRow(Map<String,Object> row){var out=new LinkedHashMap<>(row);out.remove("identity_hash");out.remove("fingerprint");return out;}
  public Map<String,Object> sync(UUID user,UUID connection,UUID key,Input input){
   if(key==null||input==null||input.from()==null||input.to()==null||input.expectedVersion()==null||input.from().isAfter(input.to())||input.to().isAfter(LocalDate.now(ZoneId.of("Asia/Seoul")))||input.to().isAfter(input.from().plusDays(30)))throw new ApiError(422,"INVALID_SYNC_WINDOW");
   Work work=tx.execute(status->{
-   lock(user);var c=one("financial_connections",user,connection);
+   lock(user);expireAuth(user);var c=one("financial_connections",user,connection);
    var old=db.queryForList("SELECT * FROM financial_sync_runs WHERE user_id=? AND idempotency_key=?",user,key);
    if(!old.isEmpty()){
     var r=old.get(0);if(!r.get("connection_id").equals(connection)||!r.get("from_date").toString().equals(input.from().toString())||!r.get("to_date").toString().equals(input.to().toString())||number(r.get("connection_version"))!=input.expectedVersion())throw new ApiError(409,"IDEMPOTENCY_CONFLICT");
@@ -44,7 +44,7 @@ public class FinancialSyncService {
    provider.requireAvailable();cipher.requireConfigured();
    if(!provider.environment().equals(c.get("environment"))||!provider.scope().equals(c.get("provider_scope")))throw new ApiError(409,"PROVIDER_CONFIGURATION_CHANGED");
    db.update("UPDATE financial_sync_runs SET status='FAILED',error_code='SYNC_INTERRUPTED',finished_at=now() WHERE user_id=? AND connection_id=? AND status='RUNNING' AND created_at<now()-interval '10 minutes'",user,connection);
-   if(db.queryForObject("SELECT count(*) FROM financial_sync_runs WHERE user_id=? AND connection_id=? AND status='RUNNING'",Long.class,user,connection)>0)throw new ApiError(409,"SYNC_IN_PROGRESS");
+   if(db.queryForObject("SELECT count(*) FROM financial_sync_runs WHERE user_id=? AND connection_id=? AND status IN ('RUNNING','AUTH_REQUIRED','AUTH_PENDING','AUTH_UNKNOWN')",Long.class,user,connection)>0)throw new ApiError(409,"SYNC_IN_PROGRESS");
    if(c.get("transaction_key_id")==null){db.update("UPDATE financial_connections SET transaction_key_id=? WHERE user_id=? AND id=?",cipher.activeKeyId(),user,connection);c.put("transaction_key_id",cipher.activeKeyId());}
    UUID run=UUID.randomUUID();db.update("INSERT INTO financial_sync_runs(id,user_id,connection_id,idempotency_key,from_date,to_date,connection_version,status) VALUES (?,?,?,?,?,?,?,'RUNNING')",run,user,connection,key,input.from(),input.to(),input.expectedVersion());
    return new Work(run,true,c);
@@ -55,6 +55,15 @@ public class FinancialSyncService {
    String cid=cipher.decrypt(new ConnectedIdCipher.Sealed((String)c.get("key_id"),(byte[])c.get("cid_nonce"),(byte[])c.get("cid_ciphertext")),user,connection,(String)c.get("environment"),(String)c.get("provider_scope"),org);
    // No undocumented pagination. An explicit <=31-day, all-card read with minimum merchant detail.
    var data=provider.approvals(cid,org,"",input.from(),input.to(),Map.of("inquiryType","1","orderBy","1","memberStoreInfoType","0")).data();
+   importData(user,connection,work.run(),input,c,data);
+  }catch(CodefFailure e){if(e.challenge()!=null)holdAuthentication(user,connection,work.run(),input.expectedVersion(),e.challenge());else fail(user,work.run(),"CODEF_"+e.kind.name());}
+  catch(ApiError e){fail(user,work.run(),e.getMessage());}
+  catch(IllegalArgumentException e){fail(user,work.run(),"INVALID_APPROVAL_RESPONSE");}
+  catch(Exception e){fail(user,work.run(),"SYNC_RESULT_UNCONFIRMED");}
+  return run(user,work.run());
+ }
+ private void importData(UUID user,UUID connection,UUID run,Input input,Map<String,Object> c,com.fasterxml.jackson.databind.JsonNode data){
+  String org=(String)c.get("organization");
    var rows=normalizer.normalize(org,data,input.from(),input.to());
    var legacy=normalizer.legacyNormalize(org,data,input.from(),input.to());
    var legacyAliases=new HashMap<String,Set<String>>();
@@ -63,7 +72,7 @@ public class FinancialSyncService {
    for(var row:rows)if(row.identity()!=null){String previous=identities.putIfAbsent(row.identity(),row.fingerprintMaterial());if(previous!=null&&!previous.equals(row.fingerprintMaterial()))throw new ApiError(422,"AMBIGUOUS_APPROVAL_IDENTITY");}
    tx.executeWithoutResult(status->{
     lock(user);var current=one("financial_connections",user,connection);
-    if(!current.get("state").equals("ACTIVE")||number(current.get("version"))!=input.expectedVersion()||!one("financial_sync_runs",user,work.run()).get("status").equals("RUNNING"))throw new ApiError(409,"CONNECTION_CHANGED_DURING_SYNC");
+    if(!current.get("state").equals("ACTIVE")||number(current.get("version"))!=input.expectedVersion()||!one("financial_sync_runs",user,run).get("status").equals("RUNNING"))throw new ApiError(409,"CONNECTION_CHANGED_DURING_SYNC");
     // A legacy alias collision matters only when there is an old row to repair.
     // New approvals keep their complete distinct identities, even if the old lossy shape matches.
     for(var alias:legacyAliases.entrySet())if(alias.getValue().size()>1){
@@ -71,17 +80,54 @@ public class FinancialSyncService {
      if(db.queryForObject("SELECT count(*) FROM financial_transactions WHERE user_id=? AND connection_id=? AND identity_hash=?",Long.class,user,connection,legacyHash)>0)throw new ApiError(422,"AMBIGUOUS_LEGACY_APPROVAL_IDENTITY");
     }
     var ids=new LinkedHashSet<UUID>();
-    for(int i=0;i<rows.size();i++)ids.add(store(user,connection,work.run(),(String)c.get("transaction_key_id"),rows.get(i),legacy.get(i)));
+    for(int i=0;i<rows.size();i++)ids.add(store(user,connection,run,(String)c.get("transaction_key_id"),rows.get(i),legacy.get(i)));
     int applied=0,held=0;
     for(UUID id:ids){apply(user,id,false);String state=(String)one("financial_transactions",user,id).get("status");if(state.equals("APPLIED"))applied++;else if(!state.equals("IGNORED"))held++;}
-    db.update("UPDATE financial_sync_runs SET status=?,received=?,applied=?,held=?,finished_at=now() WHERE user_id=? AND id=?",held==0?"IMPORTED":"PARTIAL",rows.size(),applied,held,user,work.run());
+    db.update("UPDATE financial_sync_runs SET status=?,received=?,applied=?,held=?,finished_at=now() WHERE user_id=? AND id=?",held==0?"IMPORTED":"PARTIAL",rows.size(),applied,held,user,run);
    });
-  }catch(CodefFailure e){fail(user,work.run(),"CODEF_"+e.kind.name());}
-  catch(ApiError e){fail(user,work.run(),e.getMessage());}
-  catch(IllegalArgumentException e){fail(user,work.run(),"INVALID_APPROVAL_RESPONSE");}
-  catch(Exception e){fail(user,work.run(),"SYNC_RESULT_UNCONFIRMED");}
-  return run(user,work.run());
  }
+ private void expireAuth(UUID user){
+  db.update("UPDATE financial_sync_runs r SET status='FAILED',error_code='CODEF_AUTH_EXPIRED',finished_at=now() FROM financial_sync_auth a WHERE r.user_id=? AND a.user_id=r.user_id AND a.run_id=r.id AND a.expires_at<=now() AND r.status IN ('AUTH_REQUIRED','AUTH_PENDING','AUTH_UNKNOWN')",user);
+  db.update("UPDATE financial_sync_auth a SET key_id=NULL,nonce=NULL,ciphertext=NULL FROM financial_sync_runs r WHERE a.user_id=? AND r.user_id=a.user_id AND r.id=a.run_id AND r.status IN ('FAILED','IMPORTED','PARTIAL')",user);
+ }
+ private void holdAuthentication(UUID user,UUID connection,UUID run,long version,CodefChallenge challenge){tx.executeWithoutResult(status->{
+  lock(user);var c=one("financial_connections",user,connection);var r=one("financial_sync_runs",user,run);
+  if(!"ACTIVE".equals(c.get("state"))||number(c.get("version"))!=version||!"RUNNING".equals(r.get("status"))){fail(user,run,"CONNECTION_CHANGED_DURING_SYNC");return;}
+  // A distinct purpose and run ID in authenticated data prevents CID/challenge substitution.
+  var sealed=cipher.encrypt(challenge.sealedPayload(),user,run,(String)c.get("environment"),"two-way:"+c.get("provider_scope"),(String)c.get("organization"));
+  db.update("INSERT INTO financial_sync_auth(user_id,run_id,version,method,key_id,nonce,ciphertext,expires_at) VALUES(?,?,1,?,?,?,?,now()+interval '3 minutes') ON CONFLICT(user_id,run_id) DO UPDATE SET version=financial_sync_auth.version+1,method=EXCLUDED.method,key_id=EXCLUDED.key_id,nonce=EXCLUDED.nonce,ciphertext=EXCLUDED.ciphertext,expires_at=EXCLUDED.expires_at",user,run,challenge.method(),sealed.keyId(),sealed.nonce(),sealed.ciphertext());
+  db.update("UPDATE financial_sync_runs SET status='AUTH_REQUIRED',error_code=NULL WHERE user_id=? AND id=?",user,run);
+ });}
+ public record AuthInput(Long expectedVersion,char[] answer){@Override public String toString(){return "AuthInput[redacted]";}}
+ private record AuthWork(Map<String,Object> run,Map<String,Object> connection,Map<String,Object> auth,boolean execute){}
+ public Map<String,Object> authenticate(UUID user,UUID id,UUID key,AuthInput in){
+  if(in==null||in.expectedVersion()==null||in.answer()==null||key==null)throw new ApiError(422,"AUTH_CONFIRMATION_REQUIRED");
+  try{
+   var work=tx.execute(status->{lock(user);expireAuth(user);var r=one("financial_sync_runs",user,id);var c=one("financial_connections",user,(UUID)r.get("connection_id"));var all=db.queryForList("SELECT * FROM financial_sync_auth WHERE user_id=? AND run_id=?",user,id);
+    if(all.isEmpty())throw new ApiError(409,"AUTH_NOT_PENDING");var a=all.get(0);
+    if(key.equals(a.get("last_request_key")))return new AuthWork(r,c,a,false);
+    if(number(a.get("version"))!=in.expectedVersion()||!"AUTH_REQUIRED".equals(r.get("status")))throw new ApiError(409,"AUTH_STATE_CHANGED");
+    if(!"ACTIVE".equals(c.get("state"))||number(c.get("version"))!=number(r.get("connection_version")))throw new ApiError(409,"CONNECTION_NOT_ACTIVE");
+    provider.requireAvailable();if(!provider.environment().equals(c.get("environment"))||!provider.scope().equals(c.get("provider_scope")))throw new ApiError(409,"PROVIDER_CONFIGURATION_CHANGED");
+    var challenge=challenge(user,id,c,a);try{challenge.parameters(in.answer());}catch(CodefFailure e){throw new ApiError(422,"AUTH_ANSWER_INVALID");}
+    db.update("UPDATE financial_sync_auth SET last_request_key=? WHERE user_id=? AND run_id=?",key,user,id);
+    db.update("UPDATE financial_sync_runs SET status='AUTH_PENDING' WHERE user_id=? AND id=?",user,id);return new AuthWork(r,c,a,true);
+   });
+   if(!work.execute())return run(user,id);
+   var c=work.connection();var r=work.run();UUID connection=(UUID)c.get("id");var input=new Input(LocalDate.parse(r.get("from_date").toString()),LocalDate.parse(r.get("to_date").toString()),number(r.get("connection_version")));
+   try{
+    String cid=cipher.decrypt(new ConnectedIdCipher.Sealed((String)c.get("key_id"),(byte[])c.get("cid_nonce"),(byte[])c.get("cid_ciphertext")),user,connection,(String)c.get("environment"),(String)c.get("provider_scope"),(String)c.get("organization"));
+    var data=provider.continueApprovals(cid,(String)c.get("organization"),input.from(),input.to(),challenge(user,id,c,work.auth()),in.answer()).data();
+    tx.executeWithoutResult(status->{lock(user);expireAuth(user);db.update("UPDATE financial_sync_runs SET status='RUNNING' WHERE user_id=? AND id=? AND status='AUTH_PENDING'",user,id);importData(user,connection,id,input,c,data);});
+   }catch(CodefFailure e){
+    if(e.challenge()!=null){tx.executeWithoutResult(status->{lock(user);expireAuth(user);db.update("UPDATE financial_sync_runs SET status='RUNNING' WHERE user_id=? AND id=? AND status='AUTH_PENDING'",user,id);holdAuthentication(user,connection,id,input.expectedVersion(),e.challenge());});}
+    else authFailed(user,id,"CODEF_"+e.kind.name(),e.kind==CodefFailure.Kind.UNKNOWN_OUTCOME);
+   }catch(ApiError e){authFailed(user,id,e.getMessage(),false);}catch(Exception e){authFailed(user,id,"CODEF_AUTH_RESULT_UNKNOWN",true);}
+   return run(user,id);
+  }finally{Arrays.fill(in.answer(),'\0');}
+ }
+ private CodefChallenge challenge(UUID user,UUID run,Map<String,Object> c,Map<String,Object> a){return CodefChallenge.restore(cipher.decrypt(new ConnectedIdCipher.Sealed((String)a.get("key_id"),(byte[])a.get("nonce"),(byte[])a.get("ciphertext")),user,run,(String)c.get("environment"),"two-way:"+c.get("provider_scope"),(String)c.get("organization")));}
+ private void authFailed(UUID user,UUID run,String code,boolean unknown){tx.executeWithoutResult(status->{lock(user);db.update("UPDATE financial_sync_runs SET status=?,error_code=?,finished_at=now() WHERE user_id=? AND id=? AND status IN ('RUNNING','AUTH_PENDING')",unknown?"AUTH_UNKNOWN":"FAILED",code,user,run);db.update("UPDATE financial_sync_auth SET key_id=NULL,nonce=NULL,ciphertext=NULL WHERE user_id=? AND run_id=?",user,run);});}
  private void fail(UUID user,UUID run,String code){tx.executeWithoutResult(s->{lock(user);db.update("UPDATE financial_sync_runs SET status='FAILED',error_code=?,finished_at=now() WHERE user_id=? AND id=? AND status='RUNNING'",code,user,run);});}
  private byte[] hash(String key,String value){return cipher.fingerprint(key,value.getBytes(StandardCharsets.UTF_8));}
  private UUID store(UUID user,UUID connection,UUID run,String key,CodefApprovalNormalizer.Approval a,CodefApprovalNormalizer.Approval legacy){
