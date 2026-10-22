@@ -41,6 +41,7 @@ public class FinancialPerformanceService {
   if(!"APPLIED".equals(t.get("status"))||t.get("ledger_id")==null)throw new ApiError(409,"PERFORMANCE_TRANSACTION_NOT_FINAL");
   if(!ActualCardRules.actual((String)t.get("product_rule")))throw new ApiError(422,"PERFORMANCE_RULE_UNSUPPORTED");
   if(in.decision().equals("INCLUDE")&&(!"KRW".equals(t.get("currency"))||t.get("amount_won")==null||(t.get("payment_type")==null||!Set.of("1","2").contains(t.get("payment_type")))||t.get("used_date")==null))throw new ApiError(422,"PERFORMANCE_FACTS_UNCONFIRMED");
+  if(in.decision().equals("INCLUDE")&&!ActualCardRules.KB.equals(t.get("product_rule"))&&!"1".equals(t.get("payment_type")))throw new ApiError(422,"DEBIT_INSTALLMENT_UNVERIFIED");
   var dates=new HashMap<UUID,LocalDate>();for(var d:in.refunds()){if(d==null||d.cancellationId()==null||dates.containsKey(d.cancellationId()))throw new ApiError(422,"INVALID_REFUND_DATES");dates.put(d.cancellationId(),d.receiptDate());}
   if(!dates.keySet().equals(new HashSet<>(f.stream().map(r->(UUID)r.get("cancellation_id")).toList())))throw new ApiError(409,"PERFORMANCE_REFUNDS_CHANGED");
   for(var refund:f){var date=dates.get((UUID)refund.get("cancellation_id"));if(date!=null&&(refund.get("earliest_date")==null||date.isBefore(((java.sql.Date)refund.get("earliest_date")).toLocalDate())||date.isAfter(LocalDate.now(ZoneId.of("Asia/Seoul")))))throw new ApiError(422,"INVALID_REFUND_RECEIPT_DATE");}
