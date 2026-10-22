@@ -152,7 +152,7 @@ public class AdvisorService {
  public Map<String,Long> netAllocation(Map<String,Object> row){return dev.cardadvisor.domain.BudgetAllocation.net(originalAllocation(row),((Number)row.get("amount_won")).longValue(),((Number)row.get("net_won")).longValue());}
  public List<Map<String,Object>> classificationHistory(UUID u,UUID id){entry(u,id);return db.queryForList("SELECT version,category,included,allocations::text AS allocations,changed_at FROM ledger_classification_history WHERE user_id=? AND transaction_id=? ORDER BY version DESC",u,id);}
 
- private static final Set<String> EDIT_CATEGORIES=Set.of("SHOPPING","FOOD","TRANSPORT","HOUSING","HEALTH","LEISURE","OTHER");
+ private static final Set<String> EDIT_CATEGORIES=dev.cardadvisor.domain.Categories.ALL;
  public Map<String,Object> entry(UUID u,UUID id){
   lock(u);var raw=one("SELECT purchased_at FROM ledger_entries WHERE user_id=? AND id=?",u,id);
   return entries(u,raw.get("purchased_at").toString().substring(0,7)).stream().filter(e->id.equals(e.get("id"))).findFirst().orElseThrow();
@@ -164,7 +164,7 @@ public class AdvisorService {
   if(in.version()!=((Number)old.get("classification_version")).longValue())throw new ApiError(409,"VERSION_CONFLICT");
   long total=((Number)old.get("amount_won")).longValue();
   Map<String,Long> allocations=in.allocationsWon()==null?Map.of(in.category(),total):in.allocationsWon();
-  if(allocations.size()>7||!EDIT_CATEGORIES.containsAll(allocations.keySet())||!allocations.containsKey(in.category()))throw new ApiError(422,"INVALID_ALLOCATION");
+  if(allocations.size()>EDIT_CATEGORIES.size()||!EDIT_CATEGORIES.containsAll(allocations.keySet())||!allocations.containsKey(in.category()))throw new ApiError(422,"INVALID_ALLOCATION");
   try{dev.cardadvisor.domain.BudgetAllocation.net(allocations,total,total);}catch(RuntimeException e){throw new ApiError(422,"ALLOCATION_SUM_MISMATCH");}
   if(in.category().equals(old.get("category"))&&in.included().equals(old.get("included"))&&allocations.equals(originalAllocation(old)))return entry(u,id);
   db.update("INSERT INTO ledger_classification_history(user_id,transaction_id,version,category,included,allocations) VALUES (?,?,?,?,?,?::jsonb) ON CONFLICT DO NOTHING",u,id,in.version(),old.get("category"),old.get("included"),json(originalAllocation(old)));
@@ -222,7 +222,7 @@ public class AdvisorService {
  private void requireManualManagement(UUID user,UUID id,Map<String,Object> entry){
   if(entry.get("source").equals("CODEF")||db.queryForObject("SELECT count(*) FROM financial_transactions WHERE user_id=? AND ledger_id=?",Long.class,user,id)>0)throw new ApiError(409,"PROVIDER_TRANSACTION_MANAGED");
  }
- public static final String RULE_SET_VERSION="2026-10-20-financial-benefit-v2";
+ public static final String RULE_SET_VERSION="CALCULATION_20261022_MULTI_CATEGORY";
  public Map<String,Object> checkout(UUID u,Checkout c){lock(u);UUID id=UUID.randomUUID();db.update("INSERT INTO checkouts(id,user_id,payload,version,expires_at) VALUES (?,?,?::jsonb,1,now()+interval '2 minutes')",id,u,json(c));return Map.of("id",id,"snapshotVersion",1,"context",c);}
  public record UpdateCheckout(long expectedVersion,Checkout context){}
  public Map<String,Object> updateCheckout(UUID u,UUID id,UpdateCheckout input){lock(u);var old=one("SELECT version FROM checkouts WHERE user_id=? AND id=?",u,id);long v=((Number)old.get("version")).longValue();if(v!=input.expectedVersion())throw new ApiError(409,"VERSION_CONFLICT");
@@ -235,7 +235,8 @@ public class AdvisorService {
   Checkout c=decode(r.get("payload"),Checkout.class);String m=YearMonth.now(ZoneId.of("Asia/Seoul")).toString();BudgetInput b=budget(u,m);
   var ledger=entries(u,m);long spent=ledger.stream().filter(e->Boolean.TRUE.equals(e.get("included"))).mapToLong(e->((Number)e.get("net_won")).longValue()).sum();
   long categorySpent=ledger.stream().filter(e->Boolean.TRUE.equals(e.get("included"))).mapToLong(e->netAllocation(e).getOrDefault(c.category(),0L)).sum();
-  Result result=engine.evaluate(cards(u),c,new Budget(b.totalWon(),spent,b.categories().get(c.category()),categorySpent,fixedRemaining(u,m,b)),Objects.requireNonNull(in.mode()),in.maxOpportunityCostWon());
+  var categoryBudgets=new TreeMap<String,CategoryBudget>();for(String category:c.allocationsWon().keySet()){long total=ledger.stream().filter(e->Boolean.TRUE.equals(e.get("included"))).mapToLong(e->netAllocation(e).getOrDefault(category,0L)).sum();categoryBudgets.put(category,new CategoryBudget(b.categories().get(category),total));}
+  Result result=engine.evaluate(cards(u),c,new Budget(b.totalWon(),spent,b.categories().get(c.category()),categorySpent,fixedRemaining(u,m,b),categoryBudgets),Objects.requireNonNull(in.mode()),in.maxOpportunityCostWon());
   UUID id=UUID.randomUUID();db.update("INSERT INTO recommendations(id,user_id,checkout_id,user_revision,checkout_version,payload,expires_at,calculation_month,rule_set_version) VALUES (?,?,?,?,?,?::jsonb,?,?,?)",id,u,in.checkoutId(),revision,in.snapshotVersion(),json(result),r.get("expires_at"),month(m),RULE_SET_VERSION);
   return Map.of("id",id,"result",result,"basis",Map.of("userRevision",revision,"snapshotVersion",in.snapshotVersion(),"budgetVersion",b.version(),"ruleSetVersion",RULE_SET_VERSION),"expiresAt",r.get("expires_at"));
  }

@@ -12,7 +12,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-internal val ledgerCategories=linkedMapOf("SHOPPING" to "쇼핑","FOOD" to "식비","TRANSPORT" to "교통","HOUSING" to "주거","HEALTH" to "의료","LEISURE" to "여가","OTHER" to "기타")
+internal val ledgerCategories=linkedMapOf("SHOPPING" to "쇼핑","FOOD" to "식비","TRANSPORT" to "교통","HOUSING" to "주거·통신","HEALTH" to "의료","LEISURE" to "여가","OTHER" to "기타","SUBSCRIPTION" to "구독","EDUCATION" to "교육","UNCLASSIFIED" to "미분류")
 internal fun categoryLabel(code:String)=ledgerCategories[code]?:"기존 분류 ($code)"
 private fun money(value:Long)="%,d원".format(value)
 

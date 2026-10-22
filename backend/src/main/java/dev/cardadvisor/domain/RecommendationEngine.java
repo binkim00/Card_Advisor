@@ -14,7 +14,8 @@ public final class RecommendationEngine {
   }
  }
  public record Checkout(long orderValueWon,long pointUsedWon,long prepaidMoneyUsedWon,long cardChargeWon,
-                        String category,String paymentMethod,int installments,String splitApproval,boolean confirmedByUser,ActualCardRules.Facts purchaseFacts) {
+                        String category,String paymentMethod,int installments,String splitApproval,boolean confirmedByUser,ActualCardRules.Facts purchaseFacts,Map<String,Long> allocationsWon) {
+  public Checkout(long o,long p,long m,long c,String category,String payment,int installments,String split,boolean confirmed,ActualCardRules.Facts facts){this(o,p,m,c,category,payment,installments,split,confirmed,facts,null);}
   public Checkout(long o,long p,long m,long c,String category,String payment,int installments,String split,boolean confirmed){this(o,p,m,c,category,payment,installments,split,confirmed,null);}
   public Checkout {
    if(orderValueWon<0||orderValueWon>10_000_000||pointUsedWon<0||prepaidMoneyUsedWon<0||cardChargeWon<0
@@ -22,10 +23,17 @@ public final class RecommendationEngine {
     throw new IllegalArgumentException("AMOUNT_MISMATCH");
    if(installments<1||installments>60) throw new IllegalArgumentException("INVALID_INSTALLMENTS");
    Objects.requireNonNull(category); Objects.requireNonNull(paymentMethod); Objects.requireNonNull(splitApproval);
+   if(!Categories.ALL.contains(category)||!Set.of("DIRECT_CARD","NAVER_PAY_CARD","OTHER").contains(paymentMethod)||!Set.of("NO","YES","UNKNOWN").contains(splitApproval))throw new IllegalArgumentException("INVALID_CHECKOUT_CONDITION");
+   if(allocationsWon==null)allocationsWon=Map.of(category,Math.addExact(prepaidMoneyUsedWon,cardChargeWon));
+   if(allocationsWon.isEmpty()||!Categories.ALL.containsAll(allocationsWon.keySet())||!allocationsWon.containsKey(category))throw new IllegalArgumentException("INVALID_CHECKOUT_ALLOCATION");
+   long sum=0;for(Long v:allocationsWon.values()){if(v==null||v<0)throw new IllegalArgumentException("INVALID_CHECKOUT_ALLOCATION");sum=Math.addExact(sum,v);}
+   if(sum!=Math.addExact(prepaidMoneyUsedWon,cardChargeWon))throw new IllegalArgumentException("CHECKOUT_ALLOCATION_MISMATCH");allocationsWon=Map.copyOf(allocationsWon);
   }
   public long expenseWon(){return Math.addExact(prepaidMoneyUsedWon,cardChargeWon);}
  }
- public record Budget(long totalWon,long spentWon,Long categoryLimitWon,Long categorySpentWon,long fixedRemainingWon) {
+ public record CategoryBudget(Long limitWon,Long spentWon){}
+ public record Budget(long totalWon,long spentWon,Long categoryLimitWon,Long categorySpentWon,long fixedRemainingWon,Map<String,CategoryBudget> categories) {
+  public Budget(long total,long spent,Long limit,Long categorySpent,long fixed){this(total,spent,limit,categorySpent,fixed,Map.of());}
   public Budget {
    if(totalWon<0||spentWon<0||fixedRemainingWon<0||negative(categoryLimitWon)||negative(categorySpentWon))
     throw new IllegalArgumentException("INVALID_BUDGET");
@@ -37,20 +45,25 @@ public final class RecommendationEngine {
  }
  public record Result(String status,String recommendedCardId,long expenseWon,long overallAfterWon,
                       Long categoryAfterWon,long availableAfterWon,boolean budgetWarning,List<Candidate> candidates,
-                      List<String> warnings) {}
+                      List<String> warnings,Map<String,Long> categoryAfterByCode) {}
  private static boolean negative(Long x){return x!=null&&x<0;}
  public Result evaluate(List<Card> cards,Checkout checkout,Budget budget,Mode mode,long tolerance) {
   if(tolerance<0||tolerance>10_000_000) throw new IllegalArgumentException("INVALID_TOLERANCE");
   long overall=Math.subtractExact(Math.subtractExact(budget.totalWon,budget.spentWon),checkout.expenseWon());
-  Long category=budget.categoryLimitWon==null||budget.categorySpentWon==null?null:
-   Math.subtractExact(Math.subtractExact(budget.categoryLimitWon,budget.categorySpentWon),checkout.expenseWon());
+  var categoryAfter=new TreeMap<String,Long>();
+  for(var allocation:checkout.allocationsWon.entrySet()){
+   CategoryBudget cb=budget.categories==null?null:budget.categories.get(allocation.getKey());
+   if(cb==null&&checkout.allocationsWon.size()==1)cb=new CategoryBudget(budget.categoryLimitWon,budget.categorySpentWon);
+   categoryAfter.put(allocation.getKey(),cb==null||cb.limitWon==null||cb.spentWon==null?null:Math.subtractExact(Math.subtractExact(cb.limitWon,cb.spentWon),allocation.getValue()));
+  }
+  Long category=checkout.allocationsWon.size()==1?categoryAfter.get(checkout.category):null;
   long available=Math.subtractExact(overall,budget.fixedRemainingWon);
-  boolean over=overall<0||available<0||(category!=null&&category<0);
+  boolean over=overall<0||available<0||categoryAfter.values().stream().anyMatch(v->v!=null&&v<0);
   List<String> warnings=new ArrayList<>();
   if(over) warnings.add("BUDGET_EXCEEDED");
   if(!checkout.confirmedByUser) warnings.add("CONFIRM_CHECKOUT");
   if(checkout.cardChargeWon==0) warnings.add("NO_CARD_CHARGE");
-  if(category==null) warnings.add("CATEGORY_BUDGET_UNKNOWN");
+  if(categoryAfter.values().stream().anyMatch(Objects::isNull)) warnings.add("CATEGORY_BUDGET_UNKNOWN");
   List<Candidate> candidates=new ArrayList<>();
   for(Card c:cards){
    List<String> unknown=new ArrayList<>();
@@ -97,6 +110,6 @@ public final class RecommendationEngine {
   }
   if(!checkout.confirmedByUser||checkout.cardChargeWon==0) selected=null;
   return new Result(selected==null?"HELD":"VALID",selected==null?null:selected.cardId,
-   checkout.expenseWon(),overall,category,available,over,List.copyOf(candidates),List.copyOf(warnings));
+   checkout.expenseWon(),overall,category,available,over,List.copyOf(candidates),List.copyOf(warnings),Collections.unmodifiableMap(categoryAfter));
  }
 }

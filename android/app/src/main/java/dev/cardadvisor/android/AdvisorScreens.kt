@@ -83,7 +83,9 @@ private fun displayWon(value: Long) = "%,d원".format(java.util.Locale.KOREA,val
     Surface(color=MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth()){
         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
             Text("구매 후 전체 예산 "+displayWon(result.getLong("overallAfterWon")),fontWeight=FontWeight.SemiBold)
-            Text("쇼핑 예산 "+if(result.isNull("categoryAfterWon"))"미확인" else displayWon(result.getLong("categoryAfterWon")),style=MaterialTheme.typography.bodySmall)
+            val categoryBalances=result.optJSONObject("categoryAfterByCode")
+            if(categoryBalances!=null)categoryBalances.keys().forEach{key->Text(categoryLabel(key)+" 예산 "+if(categoryBalances.isNull(key))"미확인" else displayWon(categoryBalances.getLong(key)),style=MaterialTheme.typography.bodySmall)}
+            else Text("분류 예산 "+if(result.isNull("categoryAfterWon"))"미확인" else displayWon(result.getLong("categoryAfterWon")),style=MaterialTheme.typography.bodySmall)
             Text("고정비 고려 잔액 "+displayWon(result.getLong("availableAfterWon")),style=MaterialTheme.typography.bodySmall)
             if(result.getBoolean("budgetWarning"))Text("예산 또는 고정비를 고려한 여유 금액을 넘습니다.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
         }
@@ -94,6 +96,10 @@ private fun displayWon(value: Long) = "%,d원".format(java.util.Locale.KOREA,val
             if(!card.isNull("opportunityCostWon"))Text(card.getString("name")+" · 최대 혜택과 차이 "+displayWon(card.getLong("opportunityCostWon")))
             if(card.getBoolean("targetReached"))Text(card.getString("name")+" · 구매 후 다음 달 실적 기준 충족 예상")
         }
+        val reasons=mutableSetOf<String>();for(i in 0 until cs.length()){val list=cs.getJSONObject(i).optJSONArray("uncertaintyReasons");if(list!=null)for(j in 0 until list.length())reasons.add(list.getString(j))}
+        if("INSTALLMENT_RULE_UNVERIFIED" in reasons)Text("할부 혜택 조건을 확인하지 못해 추천을 보류했습니다.")
+        if("SPLIT_APPROVAL_UNVERIFIED" in reasons)Text("분할 승인의 건별 혜택 조건을 확인해야 합니다.")
+        if("PAYMENT_METHOD_UNSUPPORTED" in reasons)Text("선택한 결제수단의 혜택 조건은 아직 확인되지 않았습니다.")
         Text("미래 혜택은 다음 달 사용에 따라 달라집니다. 추천만으로 지출이 기록되지 않습니다.")
     }
 }

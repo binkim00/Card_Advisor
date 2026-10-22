@@ -10,7 +10,7 @@ import java.util.*;
 @Service @Transactional
 public class FixedCostService {
  private final JdbcTemplate db;private final FixedCostCalculator calculator=new FixedCostCalculator();
- private static final Set<String> CATEGORIES=Set.of("SHOPPING","FOOD","TRANSPORT","HOUSING","HEALTH","LEISURE","OTHER");
+ private static final Set<String> CATEGORIES=dev.cardadvisor.domain.Categories.ALL;
  public FixedCostService(JdbcTemplate db){this.db=db;}
  private Map<String,Object> one(String sql,Object...args){var rows=db.queryForList(sql,args);if(rows.isEmpty())throw new ApiError(404,"RESOURCE_NOT_FOUND");return rows.get(0);}
  private void lock(UUID user){one("SELECT revision FROM app_users WHERE id=? FOR UPDATE",user);}

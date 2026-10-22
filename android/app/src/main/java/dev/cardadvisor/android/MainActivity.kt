@@ -74,6 +74,8 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
  var cardStates by remember{mutableStateOf(JSONArray())}
  var actualMode by remember{mutableStateOf(false)}
  var paymentMethod by remember{mutableStateOf("NAVER_PAY_CARD")}
+ var checkoutCategory by remember{mutableStateOf("SHOPPING")};var installmentMonths by remember{mutableStateOf("1")};var splitApproval by remember{mutableStateOf("NO")}
+ var splitCategories by remember{mutableStateOf(false)};val checkoutAllocations=remember{mutableStateMapOf<String,String>()}
  var confirmedDetectionGeneration by remember{mutableStateOf<Long?>(null)}
  var merchant by remember{mutableStateOf("NAVER_PLUS_STORE")};var ordinaryGoods by remember{mutableStateOf(true)};var factsConfirmed by remember{mutableStateOf(false)}
  var cancelReceivedDate by remember{mutableStateOf(LocalDate.now(ZoneId.of("Asia/Seoul")).toString())}
@@ -99,7 +101,8 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
       if(source!=null&&CheckoutDetection.current()?.generation!=source){invalidate();factsConfirmed=false;message="주문서가 바뀌거나 만료됐습니다. 다시 확인해 주세요.";return@runTask}
       val requestedGeneration=generation
       val sum=order.toLong();val p=points.toLong();val m=money.toLong()
-      val context=JSONObject().put("orderValueWon",sum).put("pointUsedWon",p).put("prepaidMoneyUsedWon",m).put("cardChargeWon",sum-p-m).put("category","SHOPPING").put("paymentMethod",paymentMethod).put("installments",1).put("splitApproval","NO").put("confirmedByUser",true)
+      val context=JSONObject().put("orderValueWon",sum).put("pointUsedWon",p).put("prepaidMoneyUsedWon",m).put("cardChargeWon",sum-p-m).put("category",checkoutCategory).put("paymentMethod",paymentMethod).put("installments",installmentMonths.toInt()).put("splitApproval",splitApproval).put("confirmedByUser",true)
+      if(splitCategories){val allocations=JSONObject();checkoutAllocations.forEach{(k,v)->if(v.isNotBlank())allocations.put(k,v.toLong())};context.put("allocationsWon",allocations)}
       if(actualMode)context.put("purchaseFacts",purchaseFacts())
       val c=JSONObject(api.request("/v1/checkout-sessions","POST",context))
       val response=JSONObject(api.request("/v1/recommendations","POST",JSONObject().put("checkoutId",c.getString("id")).put("snapshotVersion",c.getLong("snapshotVersion")).put("mode",mode).put("maxOpportunityCostWon",tolerance.toLong())))
@@ -176,7 +179,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
       Button(enabled=!busy,onClick={runTask{api.request("/v1/demo/setup","POST");refreshLedger();invalidate();message="가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다."}}){Text("가상 데이터 준비")}
      }
     }
-    11->DetectionEditor(api,onBusyChanged={busy=it},onConfirmed={o,p,m,shop,method,source->order=o;points=p;money=m;merchant=shop;paymentMethod=method;actualMode=true;ordinaryGoods=true;factsConfirmed=true;confirmedDetectionGeneration=source;selectedCardId=null;invalidate();tab=1;compareCards()},onManual={confirmedDetectionGeneration=null;actualMode=true;factsConfirmed=false;invalidate();tab=1})
+    11->DetectionEditor(api,onBusyChanged={busy=it},onConfirmed={o,p,m,shop,method,source->order=o;points=p;money=m;merchant=shop;paymentMethod=method;actualMode=true;ordinaryGoods=true;checkoutCategory="SHOPPING";installmentMonths="1";splitApproval="NO";splitCategories=false;checkoutAllocations.clear();factsConfirmed=true;confirmedDetectionGeneration=source;selectedCardId=null;invalidate();tab=1;compareCards()},onManual={confirmedDetectionGeneration=null;actualMode=true;factsConfirmed=false;invalidate();tab=1})
     10->InsightsEditor(api,onBusyChanged={busy=it},onChanged={invalidate();refreshLedger()})
     9->CardProductsEditor(api,onBusyChanged={busy=it},onChanged={actualMode=true;selectedCardId=null;invalidate();refreshPerformance()},onEditMonth={tab=3},onOpenFinance={mappingOrganization=it;tab=6})
     8->AccountSettingsEditor(api,onBusyChanged={busy=it},onInvalidated={invalidate()},onDeleted={loggedIn=false;invalidate();ledger=JSONArray();budgetSummary=null;cardStates=JSONArray();tab=7;message="계정을 삭제했습니다."})
@@ -204,16 +207,22 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
     1->{
      Row{FilterChip(selected=actualMode,onClick={actualMode=true;selectedCardId=null;invalidate()},label={Text("내 실제 카드")});FilterChip(selected=!actualMode,onClick={actualMode=false;selectedCardId=null;invalidate()},label={Text("가상 시연")})}
      if(actualMode)DesignPanel{
-      Text("약관 기반 예상 · 국내 일시불·단일 카드 승인만 지원")
+      Text("약관 기반 예상 · 할부·분할 승인은 조건 확인 전 추천 보류")
       Row{FilterChip(selected=merchant=="NAVER_PLUS_STORE",onClick={merchant="NAVER_PLUS_STORE";factsConfirmed=false;invalidate()},label={Text("네이버플러스 스토어")});FilterChip(selected=merchant=="MUSINSA",onClick={merchant="MUSINSA";factsConfirmed=false;invalidate()},label={Text("무신사")})}
       Row{Checkbox(ordinaryGoods,{ordinaryGoods=it;factsConfirmed=false;invalidate()});Text("일반 상품 (해제 시 상품권·충전 등 혜택 제외)")}
-      Row{Checkbox(factsConfirmed,{factsConfirmed=it;invalidate()},modifier=Modifier.testTag("actualFactsConfirmed"));Text("금액·국내 원화·구매 종류·단일 카드 승인 조건을 확인했습니다.")}
+      Row{Checkbox(factsConfirmed,{factsConfirmed=it;invalidate()},modifier=Modifier.testTag("actualFactsConfirmed"));Text("금액·국내 원화·구매 종류와 입력한 결제 조건을 확인했습니다.")}
       Text("실제 매입 업종·행사·취소 정산 결과에 따라 달라질 수 있습니다.",style=MaterialTheme.typography.bodySmall)
      }
      CheckoutOverview(order,points,money,busy,paymentLabel=if(paymentMethod=="DIRECT_CARD")"일반 카드" else "네이버페이 카드"){checkoutExpanded=!checkoutExpanded}
      if(checkoutExpanded) DesignPanel {
       PaymentFields(order,points,money,{order=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{points=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{money=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()})
-      Text((if(paymentMethod=="DIRECT_CARD")"일반 카드" else "네이버페이 카드")+" · 일시불 · 단일 승인",style=MaterialTheme.typography.bodySmall)
+      CheckoutConditions(checkoutCategory,paymentMethod,installmentMonths,splitApproval,splitCategories,checkoutAllocations,!busy,
+       onCategory={checkoutCategory=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},
+       onPayment={paymentMethod=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},
+       onInstallments={installmentMonths=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},
+       onSplit={splitApproval=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},
+       onAllocationToggle={splitCategories=it;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},
+       onAllocation={k,v->checkoutAllocations[k]=v;factsConfirmed=false;confirmedDetectionGeneration=null;invalidate()})
       TextButton(onClick={checkoutExpanded=false}){Text("입력 접기")}
      }
      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){listOf("BENEFIT" to "이번 혜택","PERFORMANCE" to "실적","BALANCED" to "균형").forEach{(value,label)->FilterChip(selected=mode==value,onClick={mode=value;invalidate()},label={Text((if(mode==value)"✓ " else "")+label)})}}
