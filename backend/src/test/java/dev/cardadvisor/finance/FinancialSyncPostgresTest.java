@@ -167,7 +167,7 @@ class FinancialSyncPostgresTest {
   sync(row("AI2","50000","2",""));comparison=ok(req(a,"GET","/insights?month="+DATE.toString().substring(0,7),null,null)).path("comparison");assertTrue(comparison.path("differenceWon").isNull());assertEquals(90000,comparison.path("knownCurrentWon").asLong());assertEquals("PARTIAL_KNOWN_TRANSACTIONS",comparison.path("status").asText());
  }
  String otherAccount()throws Exception{if("OTHER_TEST_ACCOUNT".equals(b)){b=register();userB=users.get(users.size()-1);}return b;}
- @BeforeEach void setup()throws Exception{provider.calls.clear();provider.behaviors.clear();a=register();userA=users.get(0);b="OTHER_TEST_ACCOUNT";connection=connect(a,"0301");}
+ @BeforeEach void setup()throws Exception{db.update("DELETE FROM request_limits WHERE bucket_hash=?",dev.cardadvisor.auth.Passwords.sha("auth-ip:synthetic-finance:127.0.0.1:"+(java.time.Instant.now().getEpochSecond()/60)));provider.calls.clear();provider.behaviors.clear();a=register();userA=users.get(0);b="OTHER_TEST_ACCOUNT";connection=connect(a,"0301");}
  @AfterEach void cleanup(){for(UUID u:users)db.update("DELETE FROM app_users WHERE id=?",u);for(UUID u:users)assertEquals(0L,db.queryForObject("SELECT count(*) FROM app_users WHERE id=?",Long.class,u));}
  Map<String,Object> input(){return Map.of("from",DATE.toString(),"to",LocalDate.now(ZoneId.of("Asia/Seoul")).toString(),"expectedVersion",2);}
  FinancialConnectionsPostgresTest.Behavior response(JsonNode data){var behavior=new FinancialConnectionsPostgresTest.Behavior();behavior.approvalData=data;provider.behaviors.add(behavior);return behavior;}

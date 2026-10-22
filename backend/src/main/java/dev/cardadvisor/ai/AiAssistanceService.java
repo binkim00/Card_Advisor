@@ -7,8 +7,8 @@ import java.util.*;import java.time.*;
 
 @Service
 public class AiAssistanceService {
- private final OpenAiGateway gateway;private final UserSettingsService settings;private final AdvisorService advisor;private final JdbcTemplate db;private final RequestLimits limits;private final ObjectMapper json;
- public AiAssistanceService(OpenAiGateway gateway,UserSettingsService settings,AdvisorService advisor,JdbcTemplate db,RequestLimits limits,ObjectMapper json){this.gateway=gateway;this.settings=settings;this.advisor=advisor;this.db=db;this.limits=limits;this.json=json;}
+ private final MerchantRuleService merchantRules;private final OpenAiGateway gateway;private final UserSettingsService settings;private final AdvisorService advisor;private final JdbcTemplate db;private final RequestLimits limits;private final ObjectMapper json;
+ public AiAssistanceService(OpenAiGateway gateway,UserSettingsService settings,AdvisorService advisor,JdbcTemplate db,RequestLimits limits,ObjectMapper json,MerchantRuleService merchantRules){this.merchantRules=merchantRules;this.gateway=gateway;this.settings=settings;this.advisor=advisor;this.db=db;this.limits=limits;this.json=json;}
  public record Fact(String id,String text,Map<String,Object> values){}
  public record Assistance(String source,String status,List<String> paragraphs,List<Fact> facts){}
  private long revision(UUID user){return db.queryForObject("SELECT revision FROM app_users WHERE id=?",Long.class,user);}
@@ -66,10 +66,11 @@ public class AiAssistanceService {
  public Map<String,Object> classify(UUID user,UUID id){
   var entry=advisor.entry(user,id);String current=(String)entry.get("category");boolean corrected=((Number)entry.get("classification_version")).longValue()>1;
   var merchants=db.queryForList("SELECT merchant_name FROM financial_transactions WHERE user_id=? AND ledger_id=? AND kind='APPROVAL' AND status='APPLIED'",user,id);var local=MerchantCategoryClassifier.classify(merchants.size()==1?(String)merchants.get(0).get("merchant_name"):null);String suggested=entry.get("purchase_facts")!=null?"SHOPPING":local.category();
+  var remembered=merchantRules.get(user,id);if(remembered.category()!=null)suggested=remembered.category();
   var facts=List.of(new Fact("KEEP_USER","사용자가 수정한 분류를 우선합니다.",Map.of("category",safeCategory(current))),new Fact("SHOPPING","확인한 쇼핑몰 구매는 쇼핑 분류 후보입니다.",Map.of("category","SHOPPING")),new Fact("UNKNOWN","정보가 부족한 거래는 기타로 남겨 확인합니다.",Map.of("category","OTHER")));
   // Human corrections are final until the human edits them again. AI never writes classification.
   var suggestionFact=new Fact("LOCAL_CATEGORY","가맹점의 분류 단서를 이용한 "+safeLabel(suggested)+" 후보입니다. 확인 후 저장해야 하며 카드 혜택 업종을 뜻하지 않습니다.",Map.of("category",safeCategory(suggested),"features",local.features(),"ambiguous",local.ambiguous()));
-  var assistance=corrected?new Assistance("USER_CORRECTION","KEPT",List.of("사용자가 수정한 분류를 유지합니다."),facts):choose(user,"CLASSIFICATION",List.of(suggestionFact));
+  var assistance=corrected?new Assistance("USER_CORRECTION","KEPT",List.of("사용자가 수정한 분류를 유지합니다."),facts):remembered.category()!=null?new Assistance("USER_MERCHANT_RULE","SUGGESTION_ONLY",List.of("이 가맹점에 직접 기억한 분류입니다. 저장 전 확인해 주세요."),List.of(suggestionFact)):choose(user,"CLASSIFICATION",List.of(suggestionFact));
   return Map.of("category",corrected?current:suggested,"status","SUGGESTION_ONLY","classificationVersion",entry.get("classification_version"),"confidence","NOT_CALIBRATED","assistance",assistance);
  }
  private static String money(long n){return String.format(Locale.KOREA,"%,d원",n);}
