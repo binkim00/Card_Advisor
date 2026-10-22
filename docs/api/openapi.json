@@ -2498,6 +2498,23 @@
           }
         }
       }
+    },
+    "/v1/finance/connections/{id}/reconcile": {
+      "post": {
+        "summary": "CODEF 공식 등록 목록을 통한 보류 연결 대조",
+        "description": "본인 인증 필수. 조회 결과에 금융 인증정보 없음. expectedVersion 및 UUID Idempotency-Key 필수. CID 없는 최초 연결은 지원 확인 보류. 등록 존재는 인증 성공을 뜻하지 않음.",
+        "responses": {
+          "200": {
+            "description": "조회/대조 결과"
+          },
+          "401": {
+            "description": "인증 필요"
+          },
+          "409": {
+            "description": "버전 또는 요청 충돌"
+          }
+        }
+      }
     }
   },
   "components": {

@@ -117,7 +117,11 @@ import java.util.UUID
    Text("저장 버전 ${c.version}",Modifier.testTag("financeVersion_${c.organization}"),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
    Button(enabled=!busy&&!stale&&!expired,onClick={clear();form=null;syncConnection=c.id},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("financeTransactions_${c.organization}")){Text("기간별 거래·보류 확인")}
    OutlinedButton(enabled=!busy&&!stale&&!expired&&c.hasId,onClick={clear();form=null;mappingConnection=c.id},modifier=Modifier.testTag("financeCardMapping_${c.organization}")){Text("조회 카드와 내 상품 연결")}
-   if(c.held)Text("처리 결과가 불명확하거나 확인 중입니다. 자동 재시도와 해제를 보류합니다. 공급자 결과 대조·추가 인증은 아직 지원하지 않습니다.")
+   if(c.held)Text("처리 결과 확인이 필요합니다. 아래 공급자 등록 상태 확인은 원래 요청을 다시 전송하지 않습니다. 연결 식별자가 없으면 CODEF 지원 확인이 필요합니다.")
+   if(c.state in listOf(FinanceState.UNKNOWN,FinanceState.AUTH_REQUIRED))OutlinedButton(enabled=enabled,onClick={action{
+    val checked=JSONObject(api.request("/v1/finance/connections/${c.id}/reconcile","POST",JSONObject().put("expectedVersion",c.version),UUID.randomUUID().toString()))
+    load();notice=when(checked.getString("decision")){"DISCONNECTION_CONFIRMED"->"공급자에서 해제된 상태를 확인했습니다.";"REGISTRATION_PRESENT_REAUTH_REQUIRED"->"공급자 등록은 남아 있습니다. 인증정보의 유효성은 확인되지 않았으므로 재인증해 주세요.";"PROVIDER_SUPPORT_REQUIRED","REGISTRATION_ABSENT_SUPPORT_REQUIRED"->"안전하게 대조할 근거가 부족합니다. CODEF 지원을 통한 확인이 필요합니다. 새 연결을 반복 요청하지 마세요.";else->"공급자 확인을 완료하지 못했습니다. 보류 상태를 유지합니다."}
+   }},modifier=Modifier.testTag("financeReconcile_${c.organization}")){Text("공급자 등록 상태 확인")}
    OutlinedButton(enabled=!busy&&!expired,onClick={action{
     val latest=FinanceConnection.parse(JSONObject(api.request("/v1/finance/connections/${c.id}")))
     val outcome=latest.operationId?.let{financeOperation(JSONObject(api.request("/v1/finance/operations/$it")))}

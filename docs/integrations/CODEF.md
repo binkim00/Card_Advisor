@@ -89,3 +89,6 @@ UNKNOWN은 성공으로 간주하지 않으며 자동 재실행도 하지 않는
 명시적 기간 조회로 확인된 KB·하나 승인 거래를 원장에 반영한다. Android 동기화 버튼/보류 확인 화면을 연결하고 합성 응답으로 검증했다. 이전 연결 화면의 실기기 검증과 구분한다. API/필드/보류 처리/한계는 [승인 정규화 계약](CODEF-APPROVALS.md), 검사 근거는 [동기화 검증](../verification/2026-10-19-codef-sync.md)을 참조한다. `./scripts/backend.ps1 sync-test`는 인증정보 없이 합성 공급자와 실제 PostgreSQL로 검사한다.
 
 Android 동기화 진입: 설정 → 금융 연결 관리 → 연결별 기간별 거래·보류 확인. 저장된 결과 조회는 외부 재호출하지 않는다. 최근 작업20개는 `GET /v1/finance/connections/{id}/sync-runs`로 조회한다. 상세 [Android 동기화 검증](../verification/2026-10-19-android-sync.md).
+
+## 2026-10-22 결과 대조 구현
+공식 [계정 목록 샘플](https://github.com/codef-io/codef-node#계정-목록-조회)의 `organizationCode`와 `connectedId`를 검증한다. POST `/v1/finance/connections/{id}/reconcile`에 `expectedVersion`과 UUID Idempotency-Key가 필요하다. 등록 존재만으로 재인증 성공을 주장하지 않고 AUTH_REQUIRED로 안내한다. UNKNOWN 해제의 공식 부재를 확인하면 해제를 확정한다. CID 없는 최초 요청은 지원 확인이 필요하며 전체 CID 목록을 조회해 사용자를 추측하지 않는다. 대조는 읽기 API만 호출하고 같은 키의 결과를 재사용한다.

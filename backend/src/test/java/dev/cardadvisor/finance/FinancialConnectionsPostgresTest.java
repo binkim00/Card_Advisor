@@ -54,7 +54,10 @@ class FinancialConnectionsPostgresTest {
       Behavior behavior=behaviors.poll();if(behavior==null)behavior=new Behavior();
       if(behavior.entered!=null){behavior.entered.countDown();behavior.release.await(8,TimeUnit.SECONDS);}
       if(behavior.status!=200){byte[] bytes="synthetic fault".getBytes();exchange.sendResponseHeaders(behavior.status,bytes.length);exchange.getResponseBody().write(bytes);return;}
-      if(path.equals("/v1/kr/card/p/account/approval-list")){
+      if(path.equals("/v1/account/list")){
+       var accounts=behavior.failed?List.of():List.of(Map.of("countryCode","KR","businessType","CD","clientType","P","organizationCode","0301","loginType","1"));
+       body=mapper.writeValueAsString(Map.of("result",Map.of("code",behavior.code),"data",Map.of("connectedId",request.path("connectedId").asText(),"accountList",accounts)));
+      }else if(path.equals("/v1/kr/card/p/account/approval-list")){
        if(!request.path("inquiryType").asText().equals("1")||!request.path("orderBy").asText().equals("1")||!request.path("memberStoreInfoType").asText().equals("0"))throw new IllegalArgumentException("Unexpected synthetic approval query");
        body=mapper.writeValueAsString(Map.of("result",Map.of("code",behavior.code),"data",behavior.approvalData==null?mapper.createArrayNode():behavior.approvalData));
       }else{

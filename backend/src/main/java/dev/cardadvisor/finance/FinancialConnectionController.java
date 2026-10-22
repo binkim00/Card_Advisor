@@ -9,11 +9,12 @@ import static dev.cardadvisor.finance.FinancialConnectionService.*;
 @RestController
 @RequestMapping("/v1/finance")
 public class FinancialConnectionController {
- private final FinancialConnectionService service;
- public FinancialConnectionController(FinancialConnectionService service){this.service=service;}
+ private final FinancialConnectionService service;private final FinancialReconciliationService checks;
+ public FinancialConnectionController(FinancialConnectionService service,FinancialReconciliationService checks){this.service=service;this.checks=checks;}
  private UUID user(HttpServletRequest request){return (UUID)request.getAttribute("userId");}
  private UUID key(String key){try{return UUID.fromString(key);}catch(Exception e){throw new ApiError(422,"IDEMPOTENCY_KEY_REQUIRED");}}
  private ResponseEntity<?> response(Map<String,Object> body){String outcome=(String)((Map<?,?>)body.get("operation")).get("status");return ResponseEntity.status(Set.of("PENDING","UNKNOWN","AUTH_REQUIRED").contains(outcome)?202:200).body(body);}
+ @PostMapping("/connections/{id}/reconcile") public Object reconcile(HttpServletRequest r,@PathVariable UUID id,@RequestHeader(value="Idempotency-Key",required=false) String k,@RequestBody FinancialReconciliationService.Input input){return checks.check(user(r),id,key(k),input);}
  @GetMapping("/connections") public Object list(HttpServletRequest r){return service.list(user(r));}
  @GetMapping("/connections/{id}") public Object get(HttpServletRequest r,@PathVariable UUID id){return service.get(user(r),id);}
  @GetMapping("/operations/{id}") public Object operation(HttpServletRequest r,@PathVariable UUID id){return service.getOperation(user(r),id);}

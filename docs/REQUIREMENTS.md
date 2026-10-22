@@ -158,3 +158,9 @@ FR-01/03/05/09/10/13/14/15/17/18/19/21/23/24의 제한된 실제 상품 규칙·
 - 조회 장애 시 마지막 갱신시각과 읽기 전용 안내, 저장/새 추천 차단, 명시 새로고침으로 복구. 401/검증오류에는 캐시 대체 없음. 429 재시도 대기 적용, 요청 자동 재전송 없음.
 - DeviceFreeBudgetFlowTest/OfflineDashboardTest 에뮬레이터→실API→격리PG2개 통과. UI 분할 저장·다른달 고정비500배분·250부분취소→예약225, 암호화/계정·월·서버 분리/장애대체/쓰기차단/재연결/로그아웃삭제 확인. 테스트 대화상자 저장버튼에 불필요한 scrollTo를 호출한 실패를 바로잡아 최종 통과. 개인 계정과 별도 합성 계정만 사용·삭제. .run/device-free-api-pg-retry.log, device-free-android.json.
 - 정상 API18080 health UP 및 원본 DB Flyway24 확인. 원장187/금융190/상품연결1 유지. 실제 쇼핑/실폰/외부 호출은 없음.
+
+## 2026-10-22 UNKNOWN 공식 계정 목록 대조
+- CODEF 공식 account/list의 connectedId/accountList/organizationCode/countryCode/businessType/clientType/loginType를 확인해 엄격히 파싱. 결과 원문/연결ID를 앱에 반환하지 않음.
+- POST connections/{id}/reconcile, 사용자/버전/요청키/공급자설정 격리. 등록 존재는 자격증명 검증이 아니므로 AUTH_REQUIRED로 재인증 안내, 해제 요청 후 공식 목록의 부재가 확인된 경우만 DISCONNECTED·암호문 제거. 원 생성의 CID가 없으면 전역 조회로 소유자를 추정하지 않고 PROVIDER_SUPPORT_REQUIRED 유지. 자동 재실행 없음.
+- V25 대조 이력과 Android 명시 버튼·한국어 결과. 합성 CODEF+API/PG66개 통과 후 엄격 목록계약 추가44개 통과, Android 빌드 성공. .run/finance-reconciliation-tests.log, device-free-api-pg-retry.log. 실제 CODEF 신규 호출 없음.
+- 추가인증 공통 SDK의 is2Way/twoWayInfo는 확인했으나 현재 KB/하나 ID/PW 상품에서 지원되는 인증 방식·응답 조건을 추측해 화면을 활성화하지 않음. 공식 기관별 지원 근거를 추가 확인한다.

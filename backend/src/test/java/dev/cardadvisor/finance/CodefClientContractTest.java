@@ -102,4 +102,9 @@ class CodefClientContractTest {
  @Test void statusAndObjectStringsDoNotExposeSecrets(){assertFalse(client.readiness().toString().contains(MARKER));assertFalse(client.toString().contains(MARKER));assertFalse(new CodefSettings(properties()).toString().contains(MARKER));assertEquals(false,client.readiness().get("realConnectionVerified"));}
  @Test void explicitOauthCheckDoesNotInvokeFinancialEndpoints(){var check=client.verifyAuthentication();assertEquals(true,check.get("oauthVerified"));assertEquals(false,check.get("financialInstitutionAuthenticated"));assertEquals(1,tokens);assertEquals(1,requests.size());client.verifyAuthentication();assertEquals(1,tokens);}
  @ParameterizedTest @ValueSource(ints={400,401,403,429,500}) void oauthFailureStatusesAreSeparatedWithoutReturningBodies(int status){oauthReply=new Reply(status,MARKER,0);var error=assertThrows(CodefFailure.class,()->client.verifyAuthentication());assertEquals(status,error.httpStatus);assertEquals(status==400||status==401?AUTHENTICATION:status==403?ACCESS_DENIED:status==429?RATE_LIMITED:TRANSPORT,error.kind);assertFalse(error.getMessage().contains(MARKER));assertEquals(1,requests.size());}
+ @Test void registrationCheckRequiresMatchingCidAndExactAccountFields(){
+  reply(200,envelope("CF-00000","{\"connectedId\":\"synthetic-cid\",\"accountList\":[{\"countryCode\":\"KR\",\"businessType\":\"CD\",\"clientType\":\"P\",\"organizationCode\":\"0301\",\"loginType\":\"1\"}]}"));assertTrue(client.registered("synthetic-cid","0301"));
+  reply(200,envelope("CF-00000","{\"connectedId\":\"synthetic-cid\",\"accountList\":[]}"));assertFalse(client.registered("synthetic-cid","0301"));
+  reply(200,envelope("CF-00000","{\"connectedId\":\"other\",\"accountList\":[]}"));fail(INVALID_RESPONSE,()->client.registered("synthetic-cid","0301"));
+ }
 }

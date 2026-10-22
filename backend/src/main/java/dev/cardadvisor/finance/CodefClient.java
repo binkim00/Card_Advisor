@@ -114,6 +114,15 @@ public final class CodefClient {
   return new AccountResult(status,returned.isBlank()?null:returned,diagnostic);
  }
  public UnmappedData accounts(String cid){connected(cid);return new UnmappedData(call("/v1/account/list",Map.of("connectedId",cid),false));}
+ /** Account-list proves registration only, never the validity of the credentials or a past update. */
+ public boolean registered(String cid,String organization){
+  JsonNode data=accounts(cid).data();if(!data.isObject()||!cid.equals(data.path("connectedId").asText())||!data.path("accountList").isArray())throw new CodefFailure(INVALID_RESPONSE);
+  int matches=0;for(JsonNode item:data.path("accountList")){
+   for(String key:List.of("countryCode","businessType","clientType","organizationCode","loginType"))if(!item.path(key).isTextual()||item.path(key).asText().isBlank())throw new CodefFailure(INVALID_RESPONSE);
+   if("KR".equals(item.path("countryCode").asText())&&"CD".equals(item.path("businessType").asText())&&"P".equals(item.path("clientType").asText())&&organization.equals(item.path("organizationCode").asText())){if(!"1".equals(item.path("loginType").asText()))throw new CodefFailure(INVALID_RESPONSE);matches++;}
+  }
+  if(matches>1)throw new CodefFailure(INVALID_RESPONSE);return matches==1;
+ }
  public UnmappedData cards(String cid,String organization,String birthDate){
   var request=lookup(cid,organization,birthDate);return new UnmappedData(call("/v1/kr/card/p/account/card-list",request,false));
  }
