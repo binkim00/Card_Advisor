@@ -2481,6 +2481,23 @@
           }
         }
       }
+    },
+    "/v1/dashboard": {
+      "get": {
+        "summary": "동일 시점 가계부·실적·예산 조회",
+        "description": "본인 인증 필수. 조회 결과에 금융 인증정보 없음. month=YYYY-MM 필수, ledger/performance/budget/revision 응답.",
+        "responses": {
+          "200": {
+            "description": "조회/대조 결과"
+          },
+          "401": {
+            "description": "인증 필요"
+          },
+          "409": {
+            "description": "버전 또는 요청 충돌"
+          }
+        }
+      }
     }
   },
   "components": {

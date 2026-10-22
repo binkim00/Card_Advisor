@@ -7,19 +7,45 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 class ApiException(val status:Int,val code:String,message:String):IllegalStateException(message)
-class ApiClient(var baseUrl: String = BuildConfig.API_BASE_URL,private val sessionStore:SecureSessionStore?=null) {
- companion object{ @Volatile private var persistentClient:ApiClient?=null; fun persistent(context:android.content.Context):ApiClient=persistentClient?:synchronized(this){persistentClient?:ApiClient(sessionStore=SecureSessionStore(context.applicationContext)).also{persistentClient=it}} }
+class ApiClient(var baseUrl: String = BuildConfig.API_BASE_URL,private val sessionStore:SecureSessionStore?=null,private val dashboardStore:SecureDashboardStore?=null) {
+ companion object{ @Volatile private var persistentClient:ApiClient?=null; fun persistent(context:android.content.Context):ApiClient=persistentClient?:synchronized(this){persistentClient?:ApiClient(sessionStore=SecureSessionStore(context.applicationContext),dashboardStore=SecureDashboardStore(context.applicationContext)).also{persistentClient=it}} }
  private val refreshLock=Mutex()
+ private val cacheLock=Mutex()
+ @Volatile private var owner:String?=null
+ val offline=MutableStateFlow(false)
+ val lastUpdated=MutableStateFlow<Long?>(null)
+ private val retryUntil=java.util.concurrent.atomic.AtomicLong()
+ suspend fun dashboard(month:String):JSONObject{
+  val expectedOwner=owner;val expectedBase=baseUrl
+  try{
+   val response=JSONObject(request("/v1/dashboard?month=$month"))
+   val ledger=response.getJSONArray("ledger");val performance=response.getJSONArray("performance");val budget=if(response.isNull("budget"))JSONObject.NULL else response.getJSONObject("budget")
+   if(owner!=expectedOwner||baseUrl!=expectedBase||token==null)throw ApiException(401,"SESSION_EXPIRED","다시 로그인해 주세요.")
+   val value=JSONObject().put("owner",expectedOwner).put("base",expectedBase).put("month",month).put("fetchedAt",System.currentTimeMillis()).put("ledger",ledger).put("performance",performance).put("budget",budget)
+   cacheLock.withLock{if(owner==expectedOwner&&token!=null){if(expectedOwner!=null)dashboardStore?.save(value);offline.value=false;lastUpdated.value=value.getLong("fetchedAt")}}
+   return value
+  }catch(e:kotlinx.coroutines.CancellationException){throw e}catch(e:Exception){
+   // Authentication/validation errors never fall back to another or expired account's data.
+   val unavailable=e is ApiException&&(e.status>=500||e.status==429)||e.cause is java.io.IOException
+   if(!unavailable)throw e
+   val cached=cacheLock.withLock{if(expectedOwner!=null&&owner==expectedOwner&&token!=null&&baseUrl==expectedBase)dashboardStore?.load(expectedOwner,expectedBase,month) else null}
+   offline.value=true
+   if(cached==null){lastUpdated.value=null;throw e};lastUpdated.value=cached.getLong("fetchedAt");return cached
+  }
+ }
+
  val sessionActive=MutableStateFlow(false)
  private val traceIds=java.util.concurrent.atomic.AtomicLong()
  @Volatile var token: String?=null
  @Volatile var refreshToken:String?=null
- suspend fun restoreSession():Boolean=refreshLock.withLock{val saved=sessionStore?.load()?:return@withLock false;token=saved.access;refreshToken=saved.refresh;sessionActive.value=true;true}
- suspend fun setSession(value:JSONObject){val access=value.getString("accessToken");val refresh=value.optString("refreshToken").takeIf{it.isNotBlank()};require(access.length in 16..256);if(sessionStore!=null){require(refresh!=null);sessionStore.save(SavedSession(access,refresh))};token=access;refreshToken=refresh;sessionActive.value=true}
- suspend fun clearSession(){token=null;refreshToken=null;sessionActive.value=false;sessionStore?.clear()}
+ suspend fun restoreSession():Boolean=refreshLock.withLock{val saved=sessionStore?.load()?:return@withLock false;token=saved.access;refreshToken=saved.refresh;owner=saved.owner;sessionActive.value=true;true}
+ suspend fun setSession(value:JSONObject){val nextOwner=value.optString("userId").takeIf{it.isNotBlank()};if(nextOwner!=owner){cacheLock.withLock{dashboardStore?.clear()};offline.value=false;lastUpdated.value=null};owner=nextOwner;val access=value.getString("accessToken");val refresh=value.optString("refreshToken").takeIf{it.isNotBlank()};require(access.length in 16..256);if(sessionStore!=null){require(refresh!=null);sessionStore.save(SavedSession(access,refresh,owner))};token=access;refreshToken=refresh;sessionActive.value=true}
+ suspend fun clearSession(){token=null;refreshToken=null;owner=null;sessionActive.value=false;offline.value=false;lastUpdated.value=null;sessionStore?.clear();cacheLock.withLock{dashboardStore?.clear()}}
  private suspend fun rotate(){val refresh=refreshToken?:throw ApiException(401,"SESSION_EXPIRED","다시 로그인해 주세요.");try{setSession(JSONObject(sendOnce("/v1/auth/refresh","POST",JSONObject().put("refreshToken",refresh))))}catch(e:ApiException){if(e.status==401)clearSession();throw e}}
  suspend fun renewSession(){refreshLock.withLock{withContext(kotlinx.coroutines.NonCancellable){rotate()}}}
  suspend fun request(path:String,method:String="GET",body:JSONObject?=null,idempotencyKey:String?=null):String{
+  if(offline.value&&method!="GET"&&!path.startsWith("/v1/auth/"))throw ApiException(503,"OFFLINE_READ_ONLY","오프라인에서는 최근 내역만 볼 수 있습니다. 새로고침으로 연결한 뒤 저장·추천을 진행해 주세요.")
+  if(android.os.SystemClock.elapsedRealtime()<retryUntil.get())throw ApiException(429,"RATE_LIMITED","요청 제한 시간이 지나면 다시 시도해 주세요.")
   val used=token
   try{return sendOnce(path,method,body,idempotencyKey)}catch(e:ApiException){
    if(e.status!=401||e.code!="SESSION_EXPIRED"||path.startsWith("/v1/auth/"))throw e
@@ -41,6 +67,7 @@ class ApiClient(var baseUrl: String = BuildConfig.API_BASE_URL,private val sessi
    token?.let { c.setRequestProperty("Authorization","Bearer "+it) }
    if(body!=null){c.doOutput=true;c.outputStream.use{it.write(body.toString().toByteArray(Charsets.UTF_8))}}
    val status=c.responseCode;trace(HttpTracePhase.RESPONSE,status)
+   if(status==429){val seconds=c.getHeaderField("Retry-After")?.toLongOrNull()?.coerceIn(1,3600)?:30;retryUntil.set(android.os.SystemClock.elapsedRealtime()+seconds*1000)}
    val result=(if(status in 200..299)c.inputStream else c.errorStream)?.bufferedReader()?.use{it.readText()}?:""
    trace(HttpTracePhase.BODY_READ,status)
    if(status !in 200..299) throw ApiException(status,runCatching { JSONObject(result).getJSONObject("error").getString("code") }.getOrDefault("REQUEST_FAILED"),when(status){
@@ -57,7 +84,7 @@ class ApiClient(var baseUrl: String = BuildConfig.API_BASE_URL,private val sessi
     else->"요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."
    })
    result
-  } catch(e:java.io.IOException){Diagnostics.failure(DiagnosticSite.HTTP_IO,e);throw IllegalStateException("서버에 연결할 수 없습니다. 로컬 서버와 USB 연결을 확인해 주세요.",e)}
+  } catch(e:java.io.IOException){Diagnostics.failure(DiagnosticSite.HTTP_IO,e);throw IllegalStateException("서버에 연결할 수 없습니다. 네트워크 상태를 확인한 뒤 새로고침해 주세요.",e)}
   finally{c.disconnect();trace(HttpTracePhase.IO_END)}
  }}finally{trace(HttpTracePhase.RESUMED)}
  }

@@ -53,7 +53,7 @@ private fun money(value:Long)="%,d원".format(value)
    for(pair in ledgerCategories.entries.chunked(2)){Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
     for((code,label) in pair)FilterChip(selected=category==code,enabled=!busy,onClick={category=code},label={Text(label)},modifier=Modifier.testTag("classify_$code"))
    }}
-   Row{Checkbox(split,{split=it},enabled=!busy);Text("여러 카테고리로 나누기")}
+   Row{Checkbox(split,{split=it},enabled=!busy,modifier=Modifier.testTag("splitBudget"));Text("여러 카테고리로 나누기")}
    if(split){
     Text("취소 전 원래 지출 ${money(saved.getLong("amount_won"))}을 나눠 입력하세요. 부분 취소는 같은 비율로 차감하며 원 단위 나머지는 큰 소수부터 배분합니다.")
     ledgerCategories.forEach{(code,label)->OutlinedTextField(allocations[code]?:"",{allocations[code]=it},label={Text(label+" 배분액 (원)")},enabled=!busy,singleLine=true,modifier=Modifier.testTag("allocation_$code"))}

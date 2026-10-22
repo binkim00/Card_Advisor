@@ -53,6 +53,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
  var loggedIn by remember{mutableStateOf(false)}
  var restoringSession by remember{mutableStateOf(true)}
  val sessionActive by api.sessionActive.collectAsState()
+ val offline by api.offline.collectAsState();val lastUpdated by api.lastUpdated.collectAsState()
  val busyState=remember{mutableStateOf(false)};var busy by busyState
  var message by remember{mutableStateOf("로컬 개발용 · 가상 카드 규칙으로 계산합니다.")}
  var order by remember{mutableStateOf("50000")};var points by remember{mutableStateOf("0")};var money by remember{mutableStateOf("0")}
@@ -87,9 +88,8 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
  val month=YearMonth.now(ZoneId.of("Asia/Seoul")).toString()
  suspend fun refreshPerformance(){cardStates=JSONArray(api.request("/v1/cards/performance?month="+month))}
  suspend fun refreshLedger(){
-  budgetSummary=null
-  ledger=JSONArray(api.request("/v1/transactions?month="+month));refreshPerformance()
-  try{budgetSummary=JSONObject(api.request("/v1/budgets/$month/summary"))}catch(e:ApiException){if(e.status==404)budgetSummary=null else throw e}
+  val snapshot=api.dashboard(month)
+  ledger=snapshot.getJSONArray("ledger");cardStates=snapshot.getJSONArray("performance");budgetSummary=if(snapshot.isNull("budget"))null else snapshot.getJSONObject("budget")
  }
  fun invalidate(){generation++;result=null;recommendationId=null;explanation=null;expiresAt=0}
  fun runTask(task:suspend()->Unit){if(busy)return;focus.clearFocus();keyboard?.hide();busy=true;Diagnostics.event(DiagnosticEvent.APP_TASK_ENQUEUED);scope.launch{Diagnostics.event(DiagnosticEvent.APP_TASK_BEGIN);try{task()}catch(e:NumberFormatException){message="금액은 숫자로 입력해 주세요."}catch(e:Exception){message=e.message?:"처리하지 못했습니다."}finally{busy=false;Diagnostics.event(DiagnosticEvent.APP_TASK_END)}}}
@@ -119,6 +119,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
   }
  }
  LaunchedEffect(Unit){try{loggedIn=api.restoreSession();if(loggedIn)message="저장된 로그인으로 다시 연결했습니다."}finally{restoringSession=false}}
+ LaunchedEffect(offline){if(offline){invalidate();factsConfirmed=false;manualFactsConfirmed=false;CheckoutDetection.clear()}}
  LaunchedEffect(sessionActive){if(!sessionActive&&loggedIn&&api.token==null){busy=false;loggedIn=false;invalidate();ledger=JSONArray();budgetSummary=null;cardStates=JSONArray();message="로그인이 만료되었습니다. 다시 로그인해 주세요."}}
  val appLifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
  DisposableEffect(appLifecycle){val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP){invalidate();factsConfirmed=false}};appLifecycle.addObserver(observer);onDispose{appLifecycle.removeObserver(observer)}}
@@ -159,6 +160,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
    }
    }
   }else{
+   if(offline){DesignPanel{Text("오프라인 · 저장된 최근 내역",modifier=Modifier.testTag("offlineBanner"));Text("저장·새 추천은 연결 후 가능합니다. 마지막 갱신: "+(lastUpdated?.let{Instant.ofEpochMilli(it).atZone(ZoneId.of("Asia/Seoul")).format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))}?:"없음"));OutlinedButton(enabled=!busy,onClick={runTask{refreshLedger();message=if(api.offline.value)"아직 서버에 연결되지 않았습니다." else "최신 내역으로 갱신했습니다."}}){Text("연결 다시 확인")}}}
    when(tab){
     7->{
      if(detectedCheckout!=null)OutlinedButton(enabled=!busy,onClick={tab=11}){Text("감지한 주문서 금액 확인")}

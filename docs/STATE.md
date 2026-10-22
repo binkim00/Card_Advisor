@@ -545,5 +545,11 @@ Notion FR-01~FR-24를 Android 앱·백엔드·PostgreSQL·외부 연동·테스�
 - Android 결제월 선택/다른 달 조회/배분금액 입력. 로딩·충돌·재조회 및 기존 전체 연결 보존.
 - API/PG 및 기존 분할·고정비 계산21개 통과(.run/fixed-allocation-tests.log), Android debug 빌드 통과(.run/fixed-allocation-android.log). 물리 기기 미수행. 정상 API 재시작 요청, 후속 health/DB 대조 예정.
 
+## 2026-10-22 오프라인 조회·에뮬레이터 통합
+- 단일 사용자 잠금 안에서 가계부/실적/예산을 읽는 GET /v1/dashboard. Android는 완전한 응답만 Android Keystore AES-GCM으로 noBackupFilesDir에 저장하며 계정·서버·월을 대조한다. 최근 한 스냅샷, 최대7일, 로그아웃/계정전환/변조/기간경과 시 폐기. 캐시에는 추천·금융 인증정보가 없다.
+- 조회 장애 시 마지막 갱신시각과 읽기 전용 안내, 저장/새 추천 차단, 명시 새로고침으로 복구. 401/검증오류에는 캐시 대체 없음. 429 재시도 대기 적용, 요청 자동 재전송 없음.
+- DeviceFreeBudgetFlowTest/OfflineDashboardTest 에뮬레이터→실API→격리PG2개 통과. UI 분할 저장·다른달 고정비500배분·250부분취소→예약225, 암호화/계정·월·서버 분리/장애대체/쓰기차단/재연결/로그아웃삭제 확인. 테스트 대화상자 저장버튼에 불필요한 scrollTo를 호출한 실패를 바로잡아 최종 통과. 개인 계정과 별도 합성 계정만 사용·삭제. .run/device-free-api-pg-retry.log, device-free-android.json.
+- 정상 API18080 health UP 및 원본 DB Flyway24 확인. 원장187/금융190/상품연결1 유지. 실제 쇼핑/실폰/외부 호출은 없음.
+
 ## 다음 행동 1개
-암호화된 최근 내역의 오프라인 조회와 갱신시각·쓰기/추천 보류를 구현하고 에뮬레이터에서 검증한다.
+금융 UNKNOWN 공식 대조 기능의 문서·추적표를 갱신하고 검증한 변경을 커밋한다.

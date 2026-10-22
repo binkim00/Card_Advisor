@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application android:name=".DebugDiagnosticsApplication" android:networkSecurityConfig="@xml/debug_network_security">
+        <activity android:name=".DeviceFreeVerificationActivity" android:exported="false" />
         <activity android:name=".FixedCostLifecycleActivity" android:exported="false" />
         <activity android:name=".CheckoutFlowVerificationActivity" android:exported="false" />
         <activity android:name=".LedgerVerificationActivity" android:exported="false" />

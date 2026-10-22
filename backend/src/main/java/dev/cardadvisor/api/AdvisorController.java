@@ -6,6 +6,7 @@ public class AdvisorController {
  private final AdvisorService service;public AdvisorController(AdvisorService service){this.service=service;}
  private UUID user(HttpServletRequest r){return (UUID)r.getAttribute("userId");}
  @GetMapping("/health") public Map<String,Object> health(){return Map.of("status","UP","mode","LOCAL_DEVELOPMENT","realFinancialIntegration",false);}
+ @GetMapping("/dashboard") public Object dashboard(HttpServletRequest r,@RequestParam String month){return service.dashboard(user(r),month);}
  @GetMapping("/cards") public Object cards(HttpServletRequest r){return service.cards(user(r));}
  @GetMapping("/cards/performance") public Object performance(HttpServletRequest r,@RequestParam String month){return service.performance(user(r),month);}
  @PutMapping("/cards/{id}/months/{month}") public Object state(HttpServletRequest r,@PathVariable UUID id,@PathVariable String month,@RequestBody MonthStateInput body){return service.saveMonthState(user(r),id,month,body);}
