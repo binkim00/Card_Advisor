@@ -18,6 +18,7 @@ public class AdvisorService {
  public Map<String,Object> deleteUser(UUID u){lock(u);
   long pending=db.queryForObject("SELECT count(*) FROM financial_connections WHERE user_id=? AND (state NOT IN ('DISCONNECTED','FAILED') OR cid_ciphertext IS NOT NULL)",Long.class,u);
   if(pending>0)throw new ApiError(409,"DISCONNECT_FINANCIAL_CONNECTIONS_FIRST");
+  db.update("INSERT INTO deleted_user_tombstones(user_id) VALUES (?) ON CONFLICT DO NOTHING",u);
   db.update("DELETE FROM app_users WHERE id=?",u);return Map.of("localDataDeleted",true,"externalConnections","NONE_REMAINING");}
  private List<Card> profiles(UUID u){return db.queryForList("SELECT payload FROM cards WHERE user_id=? ORDER BY payload->>'name',id",u).stream().map(r->decode(r.get("payload"),Card.class)).toList();}
  private Card profile(UUID u,UUID id){return decode(one("SELECT payload FROM cards WHERE user_id=? AND id=?",u,id).get("payload"),Card.class);}

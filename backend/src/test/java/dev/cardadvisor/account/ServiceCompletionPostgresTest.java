@@ -5,7 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;import org.springfra
 import org.springframework.beans.factory.annotation.Autowired;import org.springframework.jdbc.core.JdbcTemplate;
 import java.net.*;import java.net.http.*;import java.time.*;import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"codef.config-file=","codef.storage-key-file=","openai.config-file="})
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"security.rate-limit-scope=synthetic-service-completion","codef.config-file=","codef.storage-key-file=","openai.config-file="})
 @EnabledIfEnvironmentVariable(named="RUN_SERVICE_PG_TESTS",matches="true")
 class ServiceCompletionPostgresTest {
  @LocalServerPort int port;@Autowired ObjectMapper json;@Autowired JdbcTemplate db;@Autowired AdvisorService advisor;
@@ -19,8 +19,8 @@ class ServiceCompletionPostgresTest {
  }
  JsonNode ok(String method,String path,Object input)throws Exception{var r=call(method,path,input,token);assertTrue(r.status>=200&&r.status<300,"Unexpected HTTP status "+r.status);return r.data;}
  JsonNode signup()throws Exception{var r=call("POST","/auth/register",Map.of("email","service-"+UUID.randomUUID()+"@example.test","password",password),null);assertEquals(201,r.status);users.add(UUID.fromString(r.data.get("userId").asText()));return r.data;}
- @BeforeEach void before()throws Exception{var session=signup();token=session.get("accessToken").asText();user=UUID.fromString(session.get("userId").asText());}
- @AfterEach void after(){for(UUID id:users)db.update("DELETE FROM app_users WHERE id=?",id);}
+ @BeforeEach void before()throws Exception{db.update("DELETE FROM request_limits WHERE bucket_hash=?",dev.cardadvisor.auth.Passwords.sha("auth-ip:synthetic-service-completion:127.0.0.1:"+(java.time.Instant.now().getEpochSecond()/60)));var session=signup();token=session.get("accessToken").asText();user=UUID.fromString(session.get("userId").asText());}
+ @AfterEach void after(){for(UUID id:users){db.update("DELETE FROM app_users WHERE id=?",id);db.update("DELETE FROM deleted_user_tombstones WHERE user_id=?",id);}}
  JsonNode facts(){return json.valueToTree(new ActualCardRules.Facts("NAVER_PLUS_STORE","GENERAL_GOODS",true));}
  UUID card(String product)throws Exception{var p=ActualCardRules.PRODUCTS.stream().filter(x->x.id().equals(product)).findFirst().orElseThrow();return UUID.fromString(ok("POST","/cards/from-product",Map.of("productId",product,"expectedRuleVersion",p.ruleVersion())).get("id").asText());}
  JsonNode state(UUID card,String m,long amount,boolean qualified)throws Exception{
@@ -35,7 +35,7 @@ class ServiceCompletionPostgresTest {
   ok("PUT","/me/consents/AI",Map.of("accepted",false,"policyVersion",UserSettingsService.POLICY,"expectedVersion",1));
   assertEquals(2L,db.queryForObject("SELECT count(*) FROM consent_events WHERE user_id=?",Long.class,user));
   assertEquals(401,call("POST","/me/deletion",Map.of("password","wrong","confirmation","계정 삭제"),token).status);
-  ok("POST","/me/deletion",Map.of("password",password,"confirmation","계정 삭제"));assertEquals(401,call("GET","/me",null,token).status);
+  ok("POST","/me/deletion",Map.of("password",password,"confirmation","계정 삭제"));assertEquals(401,call("GET","/me",null,token).status);assertEquals(1,db.queryForObject("SELECT count(*) FROM deleted_user_tombstones WHERE user_id=?",Integer.class,user));
  }
  @Test void refreshRotationReuseRevokesNewAccessToo()throws Exception{
   var session=signup();String old=session.get("accessToken").asText();var rotated=call("POST","/auth/refresh",Map.of("refreshToken",session.get("refreshToken").asText()),null);assertEquals(200,rotated.status);

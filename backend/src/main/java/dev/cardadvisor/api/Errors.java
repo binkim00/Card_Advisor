@@ -11,5 +11,5 @@ public class Errors {
  ResponseEntity<?> invalid(Exception e){return response(422,e instanceof IllegalArgumentException?e.getMessage():"INVALID_REQUEST");}
  @ExceptionHandler(DataIntegrityViolationException.class)
  ResponseEntity<?> conflict(Exception e){return response(409,"CONFLICT");}
- private ResponseEntity<?> response(int status,String code){return ResponseEntity.status(status).body(Map.of("error",Map.of("code",code==null?"INVALID_REQUEST":code),"requestId",UUID.randomUUID()));}
+ private ResponseEntity<?> response(int status,String code){return ResponseEntity.status(status).body(Map.of("error",Map.of("code",code==null||!code.matches("[A-Z][A-Z0-9_]{0,95}")?"INVALID_REQUEST":code),"requestId",UUID.randomUUID()));}
 }

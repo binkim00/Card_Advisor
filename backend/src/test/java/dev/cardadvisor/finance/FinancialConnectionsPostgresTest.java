@@ -22,7 +22,7 @@ import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Real HTTP API + Flyway + PostgreSQL. The ONLY provider is an in-process loopback server. */
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"codef.config-file=","codef.storage-key-file="})
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"security.rate-limit-scope=synthetic-finance-connections","codef.config-file=","codef.storage-key-file="})
 @Import(FinancialConnectionsPostgresTest.LocalProviderConfiguration.class)
 @EnabledIfEnvironmentVariable(named="RUN_FINANCE_PG_TESTS",matches="true")
 class FinancialConnectionsPostgresTest {
@@ -85,8 +85,8 @@ class FinancialConnectionsPostgresTest {
  }
  JsonNode expect(int status,Reply reply){assertEquals(status,reply.status,"Unexpected API status");return reply.body;}
  String register()throws Exception{var response=expect(201,request(null,"POST","/auth/register",Map.of("email","finance-"+UUID.randomUUID()+"@example.test","password",UUID.randomUUID().toString()),null));users.add(UUID.fromString(response.path("userId").asText()));return response.path("accessToken").asText();}
- @BeforeEach void setup()throws Exception{provider.calls.clear();provider.behaviors.clear();a=register();uidA=users.get(0);b=register();uidB=users.get(1);}
- @AfterEach void clean(){for(UUID user:users)db.update("DELETE FROM app_users WHERE id=?",user);for(UUID user:users)assertEquals(0L,db.queryForObject("SELECT count(*) FROM app_users WHERE id=?",Long.class,user));}
+ @BeforeEach void setup()throws Exception{db.update("DELETE FROM request_limits WHERE bucket_hash=?",dev.cardadvisor.auth.Passwords.sha("auth-ip:synthetic-finance-connections:127.0.0.1:"+(java.time.Instant.now().getEpochSecond()/60)));provider.calls.clear();provider.behaviors.clear();a=register();uidA=users.get(0);b=register();uidB=users.get(1);}
+ @AfterEach void clean(){for(UUID user:users){db.update("DELETE FROM app_users WHERE id=?",user);db.update("DELETE FROM deleted_user_tombstones WHERE user_id=?",user);}for(UUID user:users)assertEquals(0L,db.queryForObject("SELECT count(*) FROM app_users WHERE id=?",Long.class,user));}
  Map<String,Object> connect(String org){return Map.of("organization",org,"loginId",LOGIN,"password",PASSWORD,"consent",true,"consentVersion","FINANCE_LINK_V1");}
  Map<String,Object> reauth(long version){return Map.of("expectedVersion",version,"loginId",LOGIN,"password",PASSWORD,"consent",true,"consentVersion","FINANCE_LINK_V1");}
  JsonNode create(String token,String org)throws Exception{return expect(200,request(token,"POST","/finance/connections",connect(org),UUID.randomUUID()));}

@@ -1,0 +1,16 @@
+package dev.cardadvisor.account;
+import org.junit.jupiter.api.*;import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;import org.springframework.boot.test.context.SpringBootTest;import org.springframework.boot.test.web.server.LocalServerPort;import org.springframework.test.context.*;import java.nio.file.*;import java.net.*;import java.net.http.*;import java.security.*;import javax.net.ssl.*;import java.util.*;import java.util.concurrent.*;import static org.junit.jupiter.api.Assertions.*;
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"server.address=127.0.0.1","codef.config-file=","codef.storage-key-file=","openai.config-file=","account.mail-config-file="})
+@ActiveProfiles("prod") @EnabledIfEnvironmentVariable(named="RUN_SERVICE_PG_TESTS",matches="true")
+class ProductionTlsPostgresTest{
+ static Path certificate;static String password=UUID.randomUUID().toString();
+ @DynamicPropertySource static void tls(DynamicPropertyRegistry registry)throws Exception{
+  certificate=Files.createTempDirectory("advisor-synthetic-tls-").resolve("server.p12");certificate.getParent().toFile().deleteOnExit();certificate.toFile().deleteOnExit();var cmd=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin",System.getProperty("os.name").startsWith("Windows")?"keytool.exe":"keytool").toString(),"-genkeypair","-alias","test","-keyalg","RSA","-validity","1","-dname","CN=localhost","-ext","SAN=dns:localhost,ip:127.0.0.1","-keystore",certificate.toString(),"-storetype","PKCS12","-storepass:env","SYNTHETIC_TLS_PASSWORD").redirectErrorStream(true);cmd.environment().put("SYNTHETIC_TLS_PASSWORD",password);var p=cmd.start();p.getInputStream().transferTo(java.io.OutputStream.nullOutputStream());if(!p.waitFor(20,TimeUnit.SECONDS)||p.exitValue()!=0)throw new IllegalStateException("SYNTHETIC_CERT_FAILED");registry.add("server.ssl.key-store",()->certificate.toUri().toString());registry.add("server.ssl.key-store-password",()->password);
+ }
+ @LocalServerPort int port;
+ @Test void productionProfileServesVerifiedTlsAndRejectsAnonymousData()throws Exception{
+  var ks=KeyStore.getInstance("PKCS12");try(var in=Files.newInputStream(certificate)){ks.load(in,password.toCharArray());}var trust=TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());trust.init(ks);var tls=SSLContext.getInstance("TLS");tls.init(null,trust.getTrustManagers(),null);var client=HttpClient.newBuilder().sslContext(tls).connectTimeout(java.time.Duration.ofSeconds(5)).build();String base="https://localhost:"+port;
+  var health=client.send(HttpRequest.newBuilder(URI.create(base+"/v1/health")).GET().build(),HttpResponse.BodyHandlers.ofString());assertEquals(200,health.statusCode());assertTrue(health.body().contains("UP"));assertTrue(health.sslSession().isPresent());assertEquals("no-store",health.headers().firstValue("Cache-Control").orElse(""));
+  var privateData=client.send(HttpRequest.newBuilder(URI.create(base+"/v1/transactions?month=2026-01")).GET().build(),HttpResponse.BodyHandlers.ofString());assertEquals(401,privateData.statusCode());assertThrows(java.io.IOException.class,()->HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create(base+"/v1/health")).GET().build(),HttpResponse.BodyHandlers.discarding()));
+ }
+}
