@@ -49,16 +49,17 @@ public final class CodefClient {
 
  /** Caller retains responsibility for closing/clearing its own credential buffers. */
  public static final class CardLogin implements AutoCloseable {
-  final String organization,id;final char[] password;
-  public CardLogin(String organization,String id,char[] password){
-   institution(organization);if(id==null||id.isBlank()||password==null||password.length==0)throw new CodefFailure(CONFIGURATION);
-   this.organization=organization;this.id=id;this.password=password.clone();
+  final String organization,id;final char[] password,cardNo,cardPassword;
+  public CardLogin(String organization,String id,char[] password){this(organization,id,password,null);}
+  public CardLogin(String organization,String id,char[] password,CardOwnershipInput ownership){
+   institution(organization);if(id==null||id.isBlank()||password==null||password.length==0||ownership!=null&&!ownership.validFor(organization))throw new CodefFailure(CONFIGURATION);
+   this.organization=organization;this.id=id;this.password=password.clone();this.cardNo=ownership==null?null:ownership.cardNo().clone();this.cardPassword=ownership==null?null:ownership.cardPassword().clone();
   }
-  public void close(){Arrays.fill(password,'\0');}
+  public void close(){Arrays.fill(password,'\0');if(cardNo!=null)Arrays.fill(cardNo,'\0');if(cardPassword!=null)Arrays.fill(cardPassword,'\0');}
   @Override public String toString(){return "CardLogin[redacted]";}
  }
  public static final class AccountResult {
-  public enum Status { SUCCEEDED, PARTIAL, FAILED }
+  public enum Status { SUCCEEDED, PARTIAL, FAILED, AUTH_REQUIRED }
   public final Status status;private final String connectedId;
   public final String providerCode;
   AccountResult(Status status,String connectedId){this(status,connectedId,null);}
@@ -79,7 +80,7 @@ public final class CodefClient {
   institution(organization);return new LinkedHashMap<>(Map.of("countryCode","KR","businessType","CD","clientType","P","organization",organization,"loginType","1"));
  }
  private Map<String,Object> login(CardLogin login){
-  var result=identity(login.organization);result.put("id",login.id);result.put("password",encrypt(login.password));return result;
+  var result=identity(login.organization);result.put("id",login.id);result.put("password",encrypt(login.password));if(login.cardNo!=null){result.put("cardNo",new String(login.cardNo));result.put("cardPassword",encrypt(login.cardPassword));}return result;
  }
  private String encrypt(char[] password){
   byte[] bytes=null;
@@ -111,6 +112,7 @@ public final class CodefClient {
   String returned=data.path("connectedId").asText("");
   if(matched&&(returned.isBlank()||returned.length()>512||(cid!=null&&!cid.equals(returned))))throw new CodefFailure(UNKNOWN_OUTCOME);
   String diagnostic=null;for(JsonNode entry:errors){String candidate=CodefFailure.safeCode(entry.path("code").asText(null));if(candidate!=null&&!candidate.equals("CF-00000")){diagnostic=candidate;break;}}
+  if(!matched&&"CF-03002".equals(diagnostic))status=AccountResult.Status.AUTH_REQUIRED;
   return new AccountResult(status,returned.isBlank()?null:returned,diagnostic);
  }
  public UnmappedData accounts(String cid){connected(cid);return new UnmappedData(call("/v1/account/list",Map.of("connectedId",cid),false));}

@@ -29,6 +29,6 @@ internal fun financeOperation(raw:JSONObject):String{
 internal fun financeOutcome(status:String)=when(status){
  "SUCCEEDED"->"요청 처리가 확인되었습니다. 최신 연결 상태를 확인해 주세요."
  "FAILED"->"요청이 실패했습니다. 연결 상태를 확인한 뒤 다시 입력해 주세요."
- "AUTH_REQUIRED"->"추가 인증이 필요합니다. 현재 화면은 아이디·비밀번호 갱신만 지원합니다. 인증 이어하기는 아직 지원하지 않습니다."
+ "AUTH_REQUIRED"->"카드사 계정의 추가 인증 규격 확인이 필요합니다. 이 단계의 문자·간편인증 이어하기는 보류 중이며, 새 연결을 반복 요청하지 마세요. 거래 조회 중 추가 인증과는 별개입니다."
  else->"처리 결과가 확정되지 않아 보류했습니다. 재전송하지 말고 연결 상태를 조회해 주세요."
 }

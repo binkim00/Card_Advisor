@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Card Advisor local implemented API",
-    "version": "0.17.0",
+    "version": "0.18.0",
     "description": "카드 추천 로컬 API. KB/하나 승인 조회, 지원 method의 CODEF 추가 인증 재개, 실제 카드 전월액·신규 등록 유예 자격 및 취소 한도 복원 보류 구현. 기관별 미지원 인증·외화/정산 조건과 공개 운영은 별도 검증."
   },
   "servers": [
@@ -1218,6 +1218,35 @@
                   "organization": {
                     "type": "string",
                     "pattern": "^[0-9]{4}$"
+                  },
+                  "cardOwnership": {
+                    "type": "object",
+                    "description": "Optional only for a KB (0301) card possession check. Never persisted; not CF-03002 continuation.",
+                    "required": [
+                      "cardNo",
+                      "cardPassword",
+                      "confirmed"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "cardNo": {
+                        "type": "string",
+                        "pattern": "^[0-9]{13,19}$",
+                        "writeOnly": true
+                      },
+                      "cardPassword": {
+                        "type": "string",
+                        "pattern": "^[0-9]{2}$",
+                        "writeOnly": true,
+                        "description": "First two digits, RSA encrypted for CODEF."
+                      },
+                      "confirmed": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      }
+                    }
                   }
                 }
               }
@@ -1405,6 +1434,35 @@
                   "expectedVersion": {
                     "type": "integer",
                     "format": "int64"
+                  },
+                  "cardOwnership": {
+                    "type": "object",
+                    "description": "Optional only for a KB (0301) card possession check. Never persisted; not CF-03002 continuation.",
+                    "required": [
+                      "cardNo",
+                      "cardPassword",
+                      "confirmed"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "cardNo": {
+                        "type": "string",
+                        "pattern": "^[0-9]{13,19}$",
+                        "writeOnly": true
+                      },
+                      "cardPassword": {
+                        "type": "string",
+                        "pattern": "^[0-9]{2}$",
+                        "writeOnly": true,
+                        "description": "First two digits, RSA encrypted for CODEF."
+                      },
+                      "confirmed": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      }
+                    }
                   }
                 }
               }
@@ -1922,6 +1980,35 @@
                   "expectedVersion": {
                     "type": "integer",
                     "format": "int64"
+                  },
+                  "cardOwnership": {
+                    "type": "object",
+                    "description": "Optional only for a KB (0301) card possession check. Never persisted; not CF-03002 continuation.",
+                    "required": [
+                      "cardNo",
+                      "cardPassword",
+                      "confirmed"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "cardNo": {
+                        "type": "string",
+                        "pattern": "^[0-9]{13,19}$",
+                        "writeOnly": true
+                      },
+                      "cardPassword": {
+                        "type": "string",
+                        "pattern": "^[0-9]{2}$",
+                        "writeOnly": true,
+                        "description": "First two digits, RSA encrypted for CODEF."
+                      },
+                      "confirmed": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      }
+                    }
                   }
                 }
               }

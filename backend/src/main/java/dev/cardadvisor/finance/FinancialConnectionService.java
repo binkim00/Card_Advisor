@@ -16,8 +16,8 @@ public class FinancialConnectionService {
  private final JdbcTemplate db;private final CodefClient provider;private final ConnectedIdCipher cipher;
  private final TransactionTemplate tx;private final ObjectMapper json=new ObjectMapper();
  public FinancialConnectionService(JdbcTemplate db,CodefClient provider,ConnectedIdCipher cipher,PlatformTransactionManager manager){this.db=db;this.provider=provider;this.cipher=cipher;tx=new TransactionTemplate(manager);}
- public record ConnectInput(String organization,String loginId,char[] password,Boolean consent,String consentVersion){@Override public String toString(){return "ConnectInput[redacted]";}}
- public record ReauthorizeInput(Long expectedVersion,String loginId,char[] password,Boolean consent,String consentVersion){@Override public String toString(){return "ReauthorizeInput[redacted]";}}
+ public record ConnectInput(String organization,String loginId,char[] password,Boolean consent,String consentVersion,@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) CardOwnershipInput cardOwnership){@Override public String toString(){return "ConnectInput[redacted]";}}
+ public record ReauthorizeInput(Long expectedVersion,String loginId,char[] password,Boolean consent,String consentVersion,@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) CardOwnershipInput cardOwnership){@Override public String toString(){return "ReauthorizeInput[redacted]";}}
  public record DisconnectInput(Long expectedVersion){}
  private record Work(UUID user,UUID connection,UUID operation,String kind,boolean execute){ }
  private void validateLogin(String login,char[] password,Boolean consent,String version){
@@ -47,17 +47,17 @@ public class FinancialConnectionService {
    validateLogin(input.loginId(),input.password(),input.consent(),input.consentVersion());
    if(input.organization()==null||!input.organization().matches("[0-9]{4}"))throw new ApiError(422,"INVALID_INSTITUTION");
    Work work=reserve(user,key,null,"CREATE",null,input.organization(),input);
-   if(work.execute())execute(work,input.loginId(),input.password());return response(work);
-  }finally{if(input.password()!=null)Arrays.fill(input.password(),'\0');}
+   if(work.execute())execute(work,input.loginId(),input.password(),input.cardOwnership());return response(work);
+  }finally{if(input.password()!=null)Arrays.fill(input.password(),'\0');if(input.cardOwnership()!=null)input.cardOwnership().close();}
  }
  public Map<String,Object> reauthorize(UUID user,UUID id,UUID key,ReauthorizeInput input){
   try{validateLogin(input.loginId(),input.password(),input.consent(),input.consentVersion());Work work=reserve(user,key,id,"REAUTHORIZE",input.expectedVersion(),null,input);
-   if(work.execute())execute(work,input.loginId(),input.password());return response(work);
-  }finally{if(input.password()!=null)Arrays.fill(input.password(),'\0');}
+   if(work.execute())execute(work,input.loginId(),input.password(),input.cardOwnership());return response(work);
+  }finally{if(input.password()!=null)Arrays.fill(input.password(),'\0');if(input.cardOwnership()!=null)input.cardOwnership().close();}
  }
  public Map<String,Object> retry(UUID user,UUID id,UUID key,ReauthorizeInput input){
-  try{validateLogin(input.loginId(),input.password(),input.consent(),input.consentVersion());Work work=reserve(user,key,id,"CREATE",input.expectedVersion(),null,input);if(work.execute())execute(work,input.loginId(),input.password());return response(work);}
-  finally{if(input.password()!=null)Arrays.fill(input.password(),'\0');}
+  try{validateLogin(input.loginId(),input.password(),input.consent(),input.consentVersion());Work work=reserve(user,key,id,"CREATE",input.expectedVersion(),null,input);if(work.execute())execute(work,input.loginId(),input.password(),input.cardOwnership());return response(work);}
+  finally{if(input.password()!=null)Arrays.fill(input.password(),'\0');if(input.cardOwnership()!=null)input.cardOwnership().close();}
  }
  public Map<String,Object> archiveFailed(UUID user,UUID id,DisconnectInput input){return tx.execute(status->{
   lock(user);recover(user);var row=connection(user,id);
@@ -69,7 +69,7 @@ public class FinancialConnectionService {
   db.update("UPDATE financial_connections SET archived_at=now(),version=version+1,updated_at=now() WHERE user_id=? AND id=?",user,id);
   return Map.of("localRecordDeleted",true,"externalDisconnectRequested",false);
  });}
- public Map<String,Object> disconnect(UUID user,UUID id,UUID key,DisconnectInput input){Work work=reserve(user,key,id,"DISCONNECT",input.expectedVersion(),null,input);if(work.execute())execute(work,null,null);return response(work);}
+ public Map<String,Object> disconnect(UUID user,UUID id,UUID key,DisconnectInput input){Work work=reserve(user,key,id,"DISCONNECT",input.expectedVersion(),null,input);if(work.execute())execute(work,null,null,null);return response(work);}
  private byte[] fingerprint(String keyId,String kind,UUID id,Object input){
   byte[] bytes=null;
   try{bytes=json.writeValueAsBytes(Arrays.asList(kind,id,input));return cipher.fingerprint(keyId,bytes);}
@@ -81,6 +81,8 @@ public class FinancialConnectionService {
    lock(user);recover(user);
    // Ownership precedes idempotency lookup so a key can never expose another user's connection.
    Map<String,Object> row=id==null?null:connection(user,id);
+   CardOwnershipInput ownership=input instanceof ConnectInput c?c.cardOwnership():input instanceof ReauthorizeInput r?r.cardOwnership():null;
+   if(ownership!=null&&!ownership.validFor(row==null?organization:(String)row.get("organization")))throw new ApiError(422,"INVALID_KB_CARD_OWNERSHIP");
    var previous=db.queryForList("SELECT * FROM financial_connection_operations WHERE user_id=? AND idempotency_key=?",user,key);
    if(!previous.isEmpty()){
     var op=previous.get(0);byte[] hash=fingerprint((String)op.get("fingerprint_key_id"),kind,id,input);
@@ -93,6 +95,7 @@ public class FinancialConnectionService {
     if(!rows.isEmpty())row=rows.get(0);
    }else if(!env.equals(row.get("environment"))||!scope.equals(row.get("provider_scope")))throw new ApiError(409,"PROVIDER_CONFIGURATION_CHANGED");
    if(row!=null&&db.queryForObject("SELECT count(*) FROM financial_sync_runs r LEFT JOIN financial_sync_auth a ON a.user_id=r.user_id AND a.run_id=r.id WHERE r.user_id=? AND r.connection_id=? AND r.status IN ('AUTH_REQUIRED','AUTH_PENDING','AUTH_UNKNOWN') AND COALESCE(a.expires_at,r.finished_at+interval '3 minutes')>now()",Long.class,user,row.get("id"))>0)throw new ApiError(409,"SYNC_AUTH_IN_PROGRESS");
+   if(row!=null&&db.queryForObject("SELECT count(*) FROM financial_connection_operations WHERE user_id=? AND id=? AND status='AUTH_REQUIRED' AND updated_at>now()-interval '3 minutes'",Long.class,user,row.get("last_operation_id"))>0)throw new ApiError(409,"ACCOUNT_AUTH_IN_PROGRESS");
    String old=row==null?"FAILED":(String)row.get("state");
    if(kind.equals("CREATE")){
     if(id!=null&&(row.get("archived_at")!=null||!"FAILED".equals(old)||expected==null||expected.longValue()!=((Number)row.get("version")).longValue()))throw new ApiError(409,"VERSION_CONFLICT");
@@ -111,19 +114,19 @@ public class FinancialConnectionService {
    return new Work(user,cid,opid,kind,true);
   });
  }
- private void execute(Work work,String login,char[] password){
+ private void execute(Work work,String login,char[] password,CardOwnershipInput ownership){
   var row=connection(work.user(),work.connection());CodefClient.AccountResult result;
   try{
    String organization=(String)row.get("organization");String cid=null;
    if(!work.kind().equals("CREATE"))cid=cipher.decrypt(new ConnectedIdCipher.Sealed((String)row.get("key_id"),(byte[])row.get("cid_nonce"),(byte[])row.get("cid_ciphertext")),work.user(),work.connection(),(String)row.get("environment"),(String)row.get("provider_scope"),organization);
    if(work.kind().equals("DISCONNECT"))result=provider.delete(cid,organization);
-   else try(var credential=new CodefClient.CardLogin(organization,login,password)){result=work.kind().equals("CREATE")?provider.create(credential):provider.update(cid,credential);}
+   else try(var credential=new CodefClient.CardLogin(organization,login,password,ownership)){result=work.kind().equals("CREATE")?provider.create(credential):provider.update(cid,credential);}
   }catch(CodefFailure e){
    String outcome=switch(e.kind){case UNKNOWN_OUTCOME->"UNKNOWN";case AUTH_REQUIRED->"AUTH_REQUIRED";default->"FAILED";};
    finish(work,null,outcome,"CODEF_"+e.kind.name(),e.providerCode);return;
   }catch(ApiError e){finish(work,null,"UNKNOWN","FINANCE_CREDENTIAL_UNAVAILABLE");return;}
   catch(Exception e){finish(work,null,"UNKNOWN","PROVIDER_RESULT_UNCONFIRMED");return;}
-  String outcome=result.status==CodefClient.AccountResult.Status.SUCCEEDED?"SUCCEEDED":result.status==CodefClient.AccountResult.Status.PARTIAL||result.connectedId()!=null?"UNKNOWN":"FAILED";
+  String outcome=result.status==CodefClient.AccountResult.Status.AUTH_REQUIRED?"AUTH_REQUIRED":result.status==CodefClient.AccountResult.Status.SUCCEEDED?"SUCCEEDED":result.status==CodefClient.AccountResult.Status.PARTIAL||result.connectedId()!=null?"UNKNOWN":"FAILED";
   try{finish(work,result,outcome,outcome.equals("SUCCEEDED")?null:"PROVIDER_ACCOUNT_RESULT_REQUIRES_REVIEW");}
   catch(DataIntegrityViolationException e){finish(work,null,"UNKNOWN","PROVIDER_ID_OWNERSHIP_CONFLICT");}
   catch(ApiError e){finish(work,null,"UNKNOWN","FINANCE_RESULT_STORAGE_UNCONFIRMED");}

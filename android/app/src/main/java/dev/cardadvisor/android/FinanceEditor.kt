@@ -28,12 +28,13 @@ import java.util.UUID
  var syncConnection by remember{mutableStateOf<String?>(null)}
  var org by remember{mutableStateOf("")};var login by remember{mutableStateOf("")};var password by remember{mutableStateOf("")};var consent by remember{mutableStateOf(false)}
  val activity=requireNotNull(LocalActivity.current);val lifecycle=LocalLifecycleOwner.current.lifecycle
- fun clear(){login="";password="";consent=false}
+ var cardOwnership by remember{mutableStateOf(false)};var cardNo by remember{mutableStateOf("")};var cardPassword by remember{mutableStateOf("")}
+ fun clear(){login="";password="";consent=false;cardOwnership=false;cardNo="";cardPassword=""}
  DisposableEffect(lifecycle){
   val wasSecure=activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0
   activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
   val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_STOP)clear()};lifecycle.addObserver(observer)
-  onDispose{lifecycle.removeObserver(observer);if(!wasSecure)activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)}
+  onDispose{clear();lifecycle.removeObserver(observer);if(!wasSecure)activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)}
  }
  fun action(mutation:Boolean=false,block:suspend()->Unit){
   if(busy||expired)return
@@ -43,7 +44,7 @@ import java.util.UUID
    catch(e:ApiException){currentCoroutineContext().ensureActive();stale=true
     notice=when(e.status){
      401->{expired=true;clear();"로그인이 만료되었습니다. 나가기 후 다시 로그인해 주세요."}
-     409->if(e.code=="SYNC_AUTH_IN_PROGRESS")"거래 조회의 추가 인증이 진행 중입니다. 기간별 거래 화면에서 인증을 마치거나 대기 만료 후 다시 시도해 주세요." else "연결 상태가 변경되었습니다. 최신 연결을 조회한 뒤 다시 선택해 주세요."
+     409->if(e.code=="ACCOUNT_AUTH_IN_PROGRESS")"카드사 계정의 추가 인증 대기 중입니다. 잠시 후 상태를 조회해 주세요. 새 연결을 반복 요청하지 마세요." else if(e.code=="SYNC_AUTH_IN_PROGRESS")"거래 조회의 추가 인증이 진행 중입니다. 기간별 거래 화면에서 인증을 마치거나 대기 만료 후 다시 시도해 주세요." else "연결 상태가 변경되었습니다. 최신 연결을 조회한 뒤 다시 선택해 주세요."
      503->"금융 연결 서버가 준비되지 않았습니다. 저장된 연결 조회만 가능합니다."
      422->"기관 코드, 인증 입력과 동의를 확인해 주세요."
      else->"연결 정보를 불러오지 못했습니다. 최신 연결 조회로 다시 확인해 주세요."
@@ -65,10 +66,11 @@ import java.util.UUID
   val body=JSONObject();val path=if(kind=="CREATE")"/v1/finance/connections" else "/v1/finance/connections/${target?.id}/"+when(kind){"REAUTHORIZE"->"reauthorize";"RETRY"->"retry";else->"disconnect"}
   if(kind=="CREATE")body.put("organization",org) else body.put("expectedVersion",requireNotNull(target).version)
   if(kind!="DISCONNECT")body.put("loginId",login).put("password",password).put("consent",consent).put("consentVersion","FINANCE_LINK_V1")
+  if(kind!="DISCONNECT"&&cardOwnership)body.put("cardOwnership",JSONObject().put("cardNo",cardNo).put("cardPassword",cardPassword).put("confirmed",true))
   val requestKey=UUID.randomUUID().toString();clear();form=null
   action(true){
    stale=true
-   val response=try{JSONObject(api.request(path,"POST",body,requestKey))}finally{body.remove("password");body.remove("loginId")}
+   val response=try{JSONObject(api.request(path,"POST",body,requestKey))}finally{body.remove("password");body.remove("loginId");body.optJSONObject("cardOwnership")?.let{it.remove("cardNo");it.remove("cardPassword")};body.remove("cardOwnership")}
    val connection=FinanceConnection.parse(response.getJSONObject("connection"));val operation=response.getJSONObject("operation")
    require(operation.getString("connection_id")==connection.id);val status=financeOperation(operation)
    currentCoroutineContext().ensureActive();items=items.filterNot{it.id==connection.id}+connection;stale=false;selected=null;notice=financeOutcome(status)
@@ -96,15 +98,23 @@ import java.util.UUID
  if(form!=null){
   Text(when(form){"CREATE"->"새 금융 연결";"REAUTHORIZE"->"아이디·비밀번호 재인증";"RETRY"->"실패한 연결 인증정보 다시 입력";else->"금융 연결 해제 확인"},style=MaterialTheme.typography.titleMedium)
   if(form!="DISCONNECT"){
-   if(form=="CREATE")OutlinedTextField(org,{org=it.take(4)},label={Text("공식 확인된 카드사 기관 코드 · 4자리")},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth().testTag("financeOrg"))
+   if(form=="CREATE")OutlinedTextField(org,{org=it.take(4);cardOwnership=false;cardNo="";cardPassword=""},label={Text("공식 확인된 카드사 기관 코드 · 4자리")},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth().testTag("financeOrg"))
    if(form=="RETRY")Text("기관 $org · 변경할 아이디와 비밀번호를 새로 입력해 주세요. 자동으로 재전송하지 않습니다.")
    Text(if(ready?.synthetic==true)"검증용 기관 코드와 가상 아이디·비밀번호만 입력하세요." else "기관 코드와 ID/PW 지원을 확인한 카드사만 입력하세요. 인증서·OTP 이어하기는 아직 지원하지 않습니다.")
    OutlinedTextField(login,{login=it.take(128)},label={Text("금융기관 아이디")},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(autoCorrectEnabled=false),modifier=Modifier.fillMaxWidth().testTag("financeLogin"))
    OutlinedTextField(password,{password=it.take(256)},label={Text("금융기관 비밀번호")},singleLine=true,enabled=!busy,visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,autoCorrectEnabled=false),modifier=Modifier.fillMaxWidth().testTag("financePassword"))
+   if(org=="0301"){
+    Row{Checkbox(cardOwnership,{cardOwnership=it;cardNo="";cardPassword=""},enabled=!busy,modifier=Modifier.testTag("financeCardOwnership"));Text("KB에서 카드 소지 확인을 요구한 경우에만 추가 입력",Modifier.weight(1f))}
+    if(cardOwnership){
+     Text("본인 KB 카드의 전체 번호와 카드 비밀번호 앞 2자리를 CODEF에 전송합니다. 앱·서버에 저장하지 않으며 화면을 나가면 지워집니다. 일반 연결에는 필요하지 않습니다.")
+     OutlinedTextField(cardNo,{cardNo=it.filter{c->c in '0'..'9'}.take(19)},label={Text("KB 카드 전체 번호")},singleLine=true,enabled=!busy,visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword,autoCorrectEnabled=false),modifier=Modifier.fillMaxWidth().testTag("financeCardNo"))
+     OutlinedTextField(cardPassword,{cardPassword=it.filter{c->c in '0'..'9'}.take(2)},label={Text("카드 비밀번호 앞 2자리")},singleLine=true,enabled=!busy,visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword,autoCorrectEnabled=false),modifier=Modifier.fillMaxWidth().testTag("financeCardPassword"))
+    }
+   }
    Text("연결·재인증을 위해 인증정보를 서버와 CODEF에 전송합니다. 아이디·비밀번호는 앱·서버에 저장하지 않으며, 서버는 연결 식별자만 암호화해 보관합니다.")
    Row{Checkbox(consent,{consent=it},modifier=Modifier.testTag("financeConsent"));Text("금융 연결을 위한 전송·보관에 동의합니다. (FINANCE_LINK_V1)")}
   }else Text("기관 ${selected?.organization}의 연결 해제를 요청합니다. 제공자가 성공을 확인한 뒤 연결 식별자를 제거합니다. 기존 가계부 내역은 유지합니다.")
-  val valid=form=="DISCONNECT"||(org.matches(Regex("[0-9]{4}"))&&login.isNotBlank()&&password.isNotEmpty()&&consent)
+  val valid=form=="DISCONNECT"||(org.matches(Regex("[0-9]{4}"))&&login.isNotBlank()&&password.isNotEmpty()&&consent&&(!cardOwnership||(org=="0301"&&cardNo.length in 13..19&&cardPassword.length==2)))
   val duplicate=form=="CREATE"&&items.any{it.organization==org&&it.state !in listOf(FinanceState.DISCONNECTED,FinanceState.FAILED)}
   if(duplicate)Text("이미 연결되었거나 확인 중인 기관입니다. 아래 연결 상태를 조회해 주세요.")
   Button(enabled=enabled&&valid&&!duplicate,onClick={submit()},modifier=Modifier.testTag("financeSubmit")){Text(if(form=="DISCONNECT")"해제 요청 확인" else "동의하고 요청")}
