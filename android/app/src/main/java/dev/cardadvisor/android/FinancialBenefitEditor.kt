@@ -14,12 +14,14 @@ import java.time.*
 
 @Composable internal fun FinancialBenefitEditor(api:ApiClient,transactionId:String,onBusyChanged:(Boolean)->Unit,onChanged:suspend()->Unit,onClose:()->Unit){
  val scope=rememberCoroutineScope{Dispatchers.Main.immediate};val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
+ var showQualification by remember{mutableStateOf(false)}
  var review by remember{mutableStateOf<JSONObject?>(null)};var summary by remember{mutableStateOf<JSONObject?>(null)}
  var decision by remember{mutableStateOf("UNKNOWN")};var area by remember{mutableStateOf("")};var tier by remember{mutableIntStateOf(0)};var month by remember{mutableStateOf(YearMonth.now(ZoneId.of("Asia/Seoul")).toString())}
  var confirmed by remember{mutableStateOf(false)};var coverage by remember{mutableStateOf(false)};var busy by remember{mutableStateOf(false)};var stale by remember{mutableStateOf(true)};var notice by remember{mutableStateOf("저장된 혜택 확인을 불러옵니다.")}
  suspend fun load(){val v=JSONObject(api.request("/v1/finance/transactions/$transactionId/benefit-review"));val s=JSONObject(api.request("/v1/cards/${v.getString("cardId")}/financial-benefits?month=$month"));review=v;summary=s;decision=v.getString("decision");area=if(v.isNull("area"))"" else v.getString("area");tier=if(s.isNull("tier"))0 else s.getInt("tier");coverage=s.getBoolean("coverageConfirmed");confirmed=false;stale=false}
- fun action(write:Boolean=false,block:suspend()->Unit){if(busy)return;busy=true;notice="처리 중입니다.";onBusyChanged(true);focus.clearFocus();keyboard?.hide();scope.launch{try{block()}catch(e:CancellationException){throw e}catch(e:Exception){stale=true;notice=when{e is ApiException&&e.status==409->"거래나 자격 버전이 바뀌었습니다. 입력은 유지했어요. 최신 저장 상태를 다시 조회해 주세요.";e is ApiException&&e.code=="BENEFIT_QUALIFICATION_CONFLICT"->"이번 혜택 자격과 전월 실적 구간이 맞지 않습니다. 설정에서 이번 자격을 먼저 확인해 주세요.";e is ApiException&&e.status==422->"약관의 업종·지정 가맹점·결제 조건을 확인해 주세요. 미검증 상품·해외·할부는 자동 계산하지 않습니다.";write->"저장 결과를 확인하지 못했습니다. 재전송 전에 저장 상태를 조회해 주세요.";else->"조회하지 못했습니다. 상품 연결과 서버 연결을 확인해 주세요."}}finally{busy=false;onBusyChanged(false)}}}
+ fun action(write:Boolean=false,block:suspend()->Unit){if(busy)return;busy=true;notice="처리 중입니다.";onBusyChanged(true);focus.clearFocus();keyboard?.hide();scope.launch{try{block()}catch(e:CancellationException){throw e}catch(e:Exception){stale=true;notice=when{e is ApiException&&e.status==409->"거래나 자격 버전이 바뀌었습니다. 입력은 유지했어요. 최신 저장 상태를 다시 조회해 주세요.";e is ApiException&&e.code=="BENEFIT_QUALIFICATION_CONFLICT"->"이번 혜택 자격과 전월 실적 구간이 맞지 않습니다. 설정에서 이번 자격을 먼저 확인해 주세요.";e is ApiException&&e.code=="BENEFIT_TIER_CONFLICT"->"저장한 전월 인정액·신규 유예로 계산한 구간과 다릅니다. 자격 근거를 확인해 주세요.";e is ApiException&&e.status==422->"약관의 업종·지정 가맹점·결제 조건을 확인해 주세요. 미검증 상품·해외·할부는 자동 계산하지 않습니다.";write->"저장 결과를 확인하지 못했습니다. 재전송 전에 저장 상태를 조회해 주세요.";else->"조회하지 못했습니다. 상품 연결과 서버 연결을 확인해 주세요."}}finally{busy=false;onBusyChanged(false)}}}
  LaunchedEffect(transactionId){action{load();notice="실적 인정 여부와 혜택 대상 여부는 별도입니다. 약관을 확인해 주세요."}}
+ if(showQualification&&review!=null){ActualQualificationEditor(api,review!!.getString("cardId"),month,onChanged={load();onChanged()},onClose={showQualification=false});return}
  Dialog(onDismissRequest={if(!busy)onClose()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)){
  Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){Column(Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
   Text("혜택 사용·잔여 한도",style=MaterialTheme.typography.headlineSmall);Text(notice,Modifier.testTag("benefitNotice"));if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -44,6 +46,7 @@ import java.time.*
   }}
   summary?.let{s->DesignPanel{
    Text("$month 전체 혜택 계산 기준",style=MaterialTheme.typography.titleMedium)
+   OutlinedButton(enabled=!busy&&!stale,onClick={showQualification=true},modifier=Modifier.testTag("benefitQualification")){Text("전월 실적·신규 등록일로 자격 계산")}
    if(review?.optString("productRule")?.let{it.contains("KB_EASY_ALL")||it.contains("TRAVELGO")}==true){Text("이번 혜택에 적용되는 전월 실적 구간 · 당월 실적과 별도")
     (if(review?.optString("productRule")?.contains("TRAVELGO")==true)listOf(0 to "자격 미충족",1 to "20만~50만원 미만 · 최초 등록 우대 확인 포함",2 to "50만원 이상") else listOf(0 to "자격 미충족",1 to "50만~100만원 미만",2 to "100만~150만원 미만",3 to "150만원 이상")).forEach{(value,label)->FilterChip(selected=tier==value,enabled=!busy&&!stale,onClick={tier=value},label={Text(label)},modifier=Modifier.testTag("benefitTier_$value"))}
    }

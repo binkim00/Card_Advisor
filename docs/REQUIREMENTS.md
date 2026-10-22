@@ -32,3 +32,5 @@
 과거 날짜별 검증은 `docs/verification/`에 보존한다. 요구사항 원문 `docs/specifications/`의 일정·테이블 수·제안 스택은 고정 제약이 아니다. 명시 제외인 결제 실행·자동 카드 선택·모든 쇼핑몰 지원은 추가하지 않는다.
 
 2026-10-22 FR 금융 인증 보강: 거래 조회 추가 인증 API/Android·암호화 만료·합성 계약/PG/에뮬레이터 검증은 [추가 인증 근거](verification/2026-10-22-codef-additional-auth.md) 참조. 실제기관 인증과 계정 생성 인증은 별도 미검증.
+
+2026-10-22 카드 자격 보강: 전월액·최초 사용 등록 유예의 저장/계산/Android와 다음 달 실적 보존은 [자격 검증](verification/2026-10-22-actual-qualification.md) 참조.

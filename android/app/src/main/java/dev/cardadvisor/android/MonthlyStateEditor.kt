@@ -24,6 +24,7 @@ internal fun sourceLabel(source:String)=when(source){
  val today=LocalDate.now(ZoneId.of("Asia/Seoul"))
  var month by remember { mutableStateOf(YearMonth.from(today).toString()) }
  var loadedMonth by remember { mutableStateOf("") }
+ var actualIds by remember{mutableStateOf(emptySet<String>())};var qualificationCard by remember{mutableStateOf<String?>(null)}
  var cards by remember { mutableStateOf(JSONArray()) }
  var selected by remember { mutableStateOf<JSONObject?>(null) }
  var baseline by remember { mutableStateOf("") };var baselineKnown by remember { mutableStateOf(false) }
@@ -45,6 +46,7 @@ internal fun sourceLabel(source:String)=when(source){
  suspend fun load(){
   val wanted=selected?.getString("id")
   val response=JSONArray(api.request("/v1/cards/performance?month=$month"))
+  val profiles=JSONArray(api.request("/v1/cards"));actualIds=(0 until profiles.length()).map{profiles.getJSONObject(it)}.filter{it.optString("source").startsWith("OFFICIAL_")}.map{it.getString("id")}.toSet()
   cards=response;loadedMonth=month
   if(response.length()==0){selected=null;notice="등록된 카드가 없습니다. 설정에서 가상 데이터를 준비해 주세요."}
   else {adopt((0 until response.length()).map{response.getJSONObject(it)}.firstOrNull{it.getString("id")==wanted}?:response.getJSONObject(0));notice="저장된 월별 값을 불러왔습니다."}
@@ -58,8 +60,9 @@ internal fun sourceLabel(source:String)=when(source){
   }catch(e:Exception){notice=e.message?:"처리하지 못했습니다."}finally{busy=false;onBusyChanged(false)} }
  }
  LaunchedEffect(Unit){action{load()}}
+ qualificationCard?.let{id->ActualQualificationEditor(api,id,loadedMonth,onChanged={load();onChanged()},onClose={qualificationCard=null});return}
  Text("월별 실적·현재 자격",style=MaterialTheme.typography.titleLarge)
- Text("가상 카드 전용입니다. 실적은 다음 달용이고, 현재 혜택 자격은 별도 값입니다. 공식 조회값으로 저장되지 않습니다.")
+ Text("실적은 다음 달용이고, 현재 혜택 자격은 별도 값입니다. 직접 입력한 값은 공식 조회값으로 저장되지 않습니다.")
  if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
  if(selected==null)Text(notice,Modifier.testTag("monthNotice"))
  OutlinedTextField(month,{month=it},enabled=!busy,label={Text("실적 집계·혜택 적용 월 (YYYY-MM)")},modifier=Modifier.fillMaxWidth().testTag("stateMonth"),singleLine=true)
@@ -73,6 +76,7 @@ internal fun sourceLabel(source:String)=when(source){
  }
  selected?.let { c ->
   val editable=!busy&&month==loadedMonth
+  if(c.getString("id") in actualIds)OutlinedButton(enabled=editable,onClick={qualificationCard=c.getString("id")},modifier=Modifier.testTag("actualQualificationOpen")){Text("실제 카드 · 전월액과 신규 유예로 자격 계산")}
   Text("거래 차감 전 기준 한도는 유지하고, 연결 거래 혜택 사용액은 자동 재계산합니다.")
   Text("저장 버전 "+c.getLong("stateVersion")+" · 카드/월 조회 시 작성 중 입력이 초기화됩니다.")
   Text("저장된 실적 출처: "+sourceLabel(c.optString("untrackedSource"))+" · 확인일 "+if(c.isNull("untrackedAsOf"))"미기록" else c.getString("untrackedAsOf"))
