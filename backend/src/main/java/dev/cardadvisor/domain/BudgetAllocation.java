@@ -3,7 +3,7 @@ import java.util.*;
 /** Original purchase allocation; cancellation reduces each part proportionally, largest remainder first. */
 public final class BudgetAllocation {
  public static Map<String,Long> net(Map<String,Long> original,long total,long remaining){
-  if(total<=0||remaining<0||remaining>total||original==null||original.isEmpty()||original.size()>7)throw new IllegalArgumentException("INVALID_ALLOCATION");
+  if(total<=0||remaining<0||remaining>total||original==null||original.isEmpty()||original.size()>1000)throw new IllegalArgumentException("INVALID_ALLOCATION");
   long sum=0;for(var v:original.values()){if(v==null||v<0||v>total)throw new IllegalArgumentException("INVALID_ALLOCATION");sum=Math.addExact(sum,v);}
   if(sum!=total)throw new IllegalArgumentException("ALLOCATION_SUM_MISMATCH");
   var result=new TreeMap<String,Long>();var remainders=new HashMap<String,Long>();long used=0;

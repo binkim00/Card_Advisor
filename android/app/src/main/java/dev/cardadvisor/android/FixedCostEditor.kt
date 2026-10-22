@@ -27,6 +27,8 @@ private fun fixedMoney(value:Long)="%,d원".format(value)
  var busy by remember{mutableStateOf(false)};var stale by remember{mutableStateOf(false)};var notice by remember{mutableStateOf("고정비를 불러옵니다.")}
  var form by remember{mutableStateOf(false)};var planId by remember{mutableStateOf(UUID.randomUUID().toString())};var version by remember{mutableLongStateOf(0)}
  var name by remember{mutableStateOf("")};var amount by remember{mutableStateOf("")};var day by remember{mutableStateOf("")};var category by remember{mutableStateOf("OTHER")};var active by remember{mutableStateOf(true)}
+ var paymentMonth by remember{mutableStateOf(month)};var loadedPaymentMonth by remember{mutableStateOf(month)}
+ val paymentParts=remember{mutableStateMapOf<String,String>()}
  var picking by remember{mutableStateOf<JSONObject?>(null)}
  fun action(block:suspend()->Unit){if(busy)return;busy=true;onBusyChanged(true);focus.clearFocus();keyboard?.hide();notice="처리 중입니다."
   scope.launch{try{block()}catch(e:CancellationException){Diagnostics.event(DiagnosticEvent.FIXED_CANCELLED);throw e}catch(e:JSONException){
@@ -36,7 +38,7 @@ private fun fixedMoney(value:Long)="%,d원".format(value)
   }catch(e:ApiException){
    Diagnostics.failure(DiagnosticSite.FIXED_OPERATION,e)
    currentCoroutineContext().ensureActive()
-   if(e.status==409){stale=true;onInvalidated();notice=if(e.code=="TRANSACTION_ALREADY_LINKED")"이 거래는 다른 고정비에 연결돼 있습니다. 최신 내역을 확인해 주세요." else "다른 곳에서 고정비 또는 예산이 변경되었습니다. 입력은 유지했습니다. 최신 값을 불러와 주세요."}
+   if(e.status==409){stale=true;onInvalidated();notice=if(e.code=="TRANSACTION_ALREADY_LINKED"||e.code=="FIXED_ALLOCATION_EXCEEDS_TRANSACTION")"연결 금액 합계가 원래 거래 금액을 넘습니다. 다른 일정의 배분액도 확인해 주세요." else "다른 곳에서 고정비 또는 예산이 변경되었습니다. 입력은 유지했습니다. 최신 값을 불러와 주세요."}
    else notice=e.message?:"처리하지 못했습니다."
   }catch(e:Exception){Diagnostics.failure(DiagnosticSite.FIXED_OPERATION,e);currentCoroutineContext().ensureActive();notice=e.message?:"입력을 확인해 주세요."}finally{
    // The composition owns this operation. Cancellation must not publish to a removed screen.
@@ -50,7 +52,7 @@ private fun fixedMoney(value:Long)="%,d원".format(value)
   val v=JSONObject(api.request("/v1/fixed-costs?month=$month"));val es=JSONArray(api.request("/v1/transactions?month=$month"))
   val b=try{JSONObject(api.request("/v1/budgets/$month"))}catch(e:ApiException){if(e.status==404)null else throw e}
   validateFixedCostResponse(v,es,b,month)
-  view=v;entries=es;budget=b;loadedMonth=month;stale=false;form=false;picking=null;notice="$month 고정비를 불러왔습니다."
+  view=v;entries=es;paymentMonth=month;loadedPaymentMonth=month;paymentParts.clear();budget=b;loadedMonth=month;stale=false;form=false;picking=null;notice="$month 고정비를 불러왔습니다."
   Diagnostics.event(DiagnosticEvent.FIXED_LOAD_OK)
  }
  suspend fun committed(){onInvalidated();stale=true;onChanged();load();notice="고정비 변경을 저장하고 다시 불러왔습니다."}
@@ -108,18 +110,21 @@ private fun fixedMoney(value:Long)="%,d원".format(value)
     OutlinedButton(enabled=usable&&item.getBoolean("active"),onClick={picking=item;form=false},modifier=Modifier.testTag("fixedPick_$id")){Text(item.getString("name")+" 거래 연결")}
     val payments=item.getJSONArray("payments")
     for(j in 0 until payments.length()){val payment=payments.getJSONObject(j);val tx=payment.getString("transactionId")
-     Text("연결 거래 "+fixedMoney(payment.getLong("netWon"))+" · "+if(payment.getBoolean("included"))"예산 포함" else "예산 제외")
+     Text((payment.optString("purchasedAt").takeIf{it.isNotBlank()}?.let{it+" · "}?:"")+"연결 거래 "+fixedMoney(payment.getLong("netWon"))+" · "+if(payment.getBoolean("included"))"예산 포함" else "예산 제외")
      TextButton(enabled=usable,onClick={action{api.request("/v1/fixed-costs/$id/months/$month/links","PUT",JSONObject().put("transactionId",tx).put("linked",false).put("version",item.getLong("version")));committed()}},modifier=Modifier.testTag("fixedUnlink_$tx")){Text("거래 연결 해제")}
     }
    }}
   }
   picking?.let{selected->
    Text(selected.getString("name")+"에 연결할 $month 거래",style=MaterialTheme.typography.titleMedium)
-   Text("한 거래는 하나의 고정비에만 연결할 수 있습니다. 이름·금액만으로 자동 연결하지 않습니다.")
+   Text("거래 일부를 나누거나 다른 달의 결제를 연결할 수 있습니다. 가계부의 구매월은 유지합니다. 부분 취소는 배분 비율대로 반영합니다.")
+   OutlinedTextField(paymentMonth,{paymentMonth=it},enabled=!busy,label={Text("결제가 기록된 월 · YYYY-MM")},modifier=Modifier.testTag("fixedPaymentMonth"))
+   OutlinedButton(enabled=usable,onClick={action{require(runCatching{YearMonth.parse(paymentMonth)}.isSuccess){"결제 월을 확인해 주세요."};val loaded=JSONArray(api.request("/v1/transactions?month=$paymentMonth"));entries=loaded;loadedPaymentMonth=paymentMonth;paymentParts.clear();notice="선택한 달의 결제 내역을 불러왔습니다."}}){Text("다른 달 결제 불러오기")}
    if(entries.length()==0)Text("해당 월의 구매 기록이 없습니다. 가계부에서 실제 사용 내역을 먼저 기록해 주세요.")
    for(i in 0 until entries.length()){val e=entries.getJSONObject(i);val tx=e.getString("id")
     Text(e.getString("purchased_at")+" · "+categoryLabel(e.getString("category"))+" · "+fixedMoney(e.getLong("net_won"))+" · "+if(e.getBoolean("included"))"예산 포함" else "예산 제외")
-    Button(enabled=usable,onClick={action{api.request("/v1/fixed-costs/${selected.getString("id")}/months/$month/links","PUT",JSONObject().put("transactionId",tx).put("linked",true).put("version",selected.getLong("version")));committed()}},modifier=Modifier.testTag("fixedLink_$tx")){Text("이 거래를 연결")}
+    OutlinedTextField(paymentParts[tx]?:e.getLong("amount_won").toString(),{paymentParts[tx]=it},enabled=!busy,label={Text("이 일정에 연결할 원래 금액 · 원")},singleLine=true,modifier=Modifier.testTag("fixedPart_$tx"))
+    Button(enabled=usable&&paymentMonth==loadedPaymentMonth,onClick={action{val part=number(paymentParts[tx]?:e.getLong("amount_won").toString(),1,e.getLong("amount_won"));api.request("/v1/fixed-costs/${selected.getString("id")}/months/$month/links","PUT",JSONObject().put("transactionId",tx).put("linked",true).put("version",selected.getLong("version")).put("allocatedWon",part));committed()}},modifier=Modifier.testTag("fixedLink_$tx")){Text("이 거래를 연결")}
    }
    TextButton(enabled=!busy,onClick={picking=null}){Text("거래 선택 닫기")}
   }

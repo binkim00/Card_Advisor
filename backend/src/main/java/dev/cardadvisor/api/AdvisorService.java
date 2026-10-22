@@ -160,7 +160,7 @@ public class AdvisorService {
   if(in.version()!=((Number)old.get("classification_version")).longValue())throw new ApiError(409,"VERSION_CONFLICT");
   long total=((Number)old.get("amount_won")).longValue();
   Map<String,Long> allocations=in.allocationsWon()==null?Map.of(in.category(),total):in.allocationsWon();
-  if(!EDIT_CATEGORIES.containsAll(allocations.keySet())||!allocations.containsKey(in.category()))throw new ApiError(422,"INVALID_ALLOCATION");
+  if(allocations.size()>7||!EDIT_CATEGORIES.containsAll(allocations.keySet())||!allocations.containsKey(in.category()))throw new ApiError(422,"INVALID_ALLOCATION");
   try{dev.cardadvisor.domain.BudgetAllocation.net(allocations,total,total);}catch(RuntimeException e){throw new ApiError(422,"ALLOCATION_SUM_MISMATCH");}
   if(in.category().equals(old.get("category"))&&in.included().equals(old.get("included"))&&allocations.equals(originalAllocation(old)))return entry(u,id);
   db.update("INSERT INTO ledger_classification_history(user_id,transaction_id,version,category,included,allocations) VALUES (?,?,?,?,?,?::jsonb) ON CONFLICT DO NOTHING",u,id,in.version(),old.get("category"),old.get("included"),json(originalAllocation(old)));
