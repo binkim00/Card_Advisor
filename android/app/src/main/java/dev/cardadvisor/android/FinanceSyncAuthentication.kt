@@ -15,7 +15,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
  DisposableEffect(lifecycle){val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_STOP){answer="";confirmed=false}};lifecycle.addObserver(observer);onDispose{answer="";confirmed=false;lifecycle.removeObserver(observer)}}
  DesignPanel{
   Text("추가 인증",style=MaterialTheme.typography.titleMedium)
-  Text(syncOutcome(run.status))
+  Text(if(run.errorCode=="CODEF_AUTH_METHOD_UNSUPPORTED")"기관이 요청한 인증 방식은 이 앱에서 아직 처리할 수 없습니다. 재요청 제한 시간이 끝나도록 약 3분 기다린 후 내역을 새로고침해 주세요. 인증정보를 다른 입력란에 넣지 마세요." else syncOutcome(run.status))
   if(run.status=="AUTH_REQUIRED"&&run.authVersion!=null){
    Text("인증 대기는 최대 3분입니다. 입력값은 저장하지 않습니다. 만료되면 내역을 새로고침한 뒤 조회를 다시 시작하세요.")
    if(run.authMethod=="simpleAuth")Row{Checkbox(confirmed,{confirmed=it},enabled=enabled,modifier=Modifier.testTag("syncAuthConfirmed"));Text("인증 앱에서 본인 인증을 마쳤습니다")}

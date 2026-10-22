@@ -92,6 +92,7 @@ public class FinancialConnectionService {
     var rows=db.queryForList("SELECT * FROM financial_connections WHERE user_id=? AND environment=? AND provider_scope=? AND organization=?",user,env,scope,organization);
     if(!rows.isEmpty())row=rows.get(0);
    }else if(!env.equals(row.get("environment"))||!scope.equals(row.get("provider_scope")))throw new ApiError(409,"PROVIDER_CONFIGURATION_CHANGED");
+   if(row!=null&&db.queryForObject("SELECT count(*) FROM financial_sync_runs r LEFT JOIN financial_sync_auth a ON a.user_id=r.user_id AND a.run_id=r.id WHERE r.user_id=? AND r.connection_id=? AND r.status IN ('AUTH_REQUIRED','AUTH_PENDING','AUTH_UNKNOWN') AND COALESCE(a.expires_at,r.finished_at+interval '3 minutes')>now()",Long.class,user,row.get("id"))>0)throw new ApiError(409,"SYNC_AUTH_IN_PROGRESS");
    String old=row==null?"FAILED":(String)row.get("state");
    if(kind.equals("CREATE")){
     if(id!=null&&(row.get("archived_at")!=null||!"FAILED".equals(old)||expected==null||expected.longValue()!=((Number)row.get("version")).longValue()))throw new ApiError(409,"VERSION_CONFLICT");

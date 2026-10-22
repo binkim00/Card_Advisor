@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Card Advisor local implemented API",
-    "version": "0.16.0",
-    "description": "로컬 카드 추천 개발 API. 사용자 인증·가상 카드·수동 예산/원장·금융 연결 및 KB/하나 거래 동기화와 Android 확인 흐름 구현. 실금융·추가 인증·공식 상품 규칙·외화/청구월 배분은 미완료."
+    "version": "0.17.0",
+    "description": "카드 추천 로컬 API. KB/하나 승인 조회, 지원 method의 CODEF 추가 인증 재개, 실제 카드 전월액·신규 등록 유예 자격 및 취소 한도 복원 보류 구현. 기관별 미지원 인증·외화/정산 조건과 공개 운영은 별도 검증."
   },
   "servers": [
     {

@@ -15,3 +15,7 @@
 
 ## 남은 외부 검증
 기관의 실제 추가 인증 발생·지원 방식과 추가 제한시간은 실제 계정 또는 기관별 공식 상세 규격으로 확인해야 한다. 로컬 코드는 인증을 요구하는 응답이 없는데 임의로 문자 발송/인증을 시도하지 않는다.
+
+후속 수정: 미지원/불완전 CF-03002도 AUTH_UNKNOWN으로 3분 재요청을 보류한다. 원문·임의 인증 필드는 저장하지 않는다. 인증 대기 동안 같은 연결 재인증/해제도 차단한다. 후속 계약/PG 검사는 `.run/auth-conflict-final-test.log`, Android 빌드/정적 검사는 `.run/auth-hold-android.log`와 최종 release 빌드 기록, 최종 지원 인증 에뮬레이터 검사는 `.run/auth-hold-emulator.log` 참조. 실제기관 지원 확인을 의미하지 않는다.
+
+최종 연결 충돌 회귀: CodefClientContractTest·FinancialConnectionsPostgresTest·FinancialSyncPostgresTest110 통과. 코드에 맞춘 debug/release 추가 빌드는 `.run/auth-conflict-android.log`. 미지원 인증은 고객이 임의 추가 필드로 우회할 수 없다.

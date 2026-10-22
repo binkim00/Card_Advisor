@@ -9,12 +9,12 @@ private fun JSONObject.nullString(name:String):String? { require(has(name));retu
 private fun JSONObject.exactLong(name:String):Long { val v=get(name);require(v is Number && v.toString().matches(Regex("-?[0-9]+")));return v.toString().toLong() }
 private fun JSONObject.nullLong(name:String):Long? { require(has(name));return if(isNull(name))null else exactLong(name) }
 internal fun <T> syncList(raw:String,parse:(JSONObject)->T):List<T>{val a=JSONArray(raw);return (0 until a.length()).map{parse(a.getJSONObject(it))}}
-internal data class SyncRun(val id:String,val connection:String,val from:String,val to:String,val status:String,val received:Long,val applied:Long,val held:Long,val authVersion:Long?=null,val authMethod:String?=null,val authExpires:String?=null){
+internal data class SyncRun(val id:String,val connection:String,val from:String,val to:String,val status:String,val received:Long,val applied:Long,val held:Long,val authVersion:Long?=null,val authMethod:String?=null,val authExpires:String?=null,val errorCode:String?=null){
  companion object{fun parse(j:JSONObject):SyncRun {
   val s=j.getString("status");require(s in listOf("RUNNING","IMPORTED","PARTIAL","FAILED","AUTH_REQUIRED","AUTH_PENDING","AUTH_UNKNOWN"))
   val f=j.getString("from_date");val t=j.getString("to_date");require(!LocalDate.parse(f).isAfter(LocalDate.parse(t)))
   val received=j.exactLong("received");val applied=j.exactLong("applied");val held=j.exactLong("held");require(received>=0&&applied>=0&&held>=0&&applied+held<=received)
-  val auth=j.optJSONObject("authentication");val method=auth?.getString("method");require(method==null||method in listOf("smsAuthNo","emailAuthNo","simpleAuth"));val version=auth?.exactLong("version");require(version==null||version>0);return SyncRun(j.uuid("id"),j.uuid("connection_id"),f,t,s,received,applied,held,version,method,auth?.getString("expires_at"))
+  val auth=j.optJSONObject("authentication");val method=auth?.getString("method");require(method==null||method in listOf("smsAuthNo","emailAuthNo","simpleAuth"));val version=auth?.exactLong("version");require(version==null||version>0);return SyncRun(j.uuid("id"),j.uuid("connection_id"),f,t,s,received,applied,held,version,method,auth?.getString("expires_at"),j.optString("error_code").takeIf{it.matches(Regex("[A-Z_]{1,80}"))})
  }}
 }
 internal data class FinancialRow(val id:String,val connection:String,val date:String?,val card:String?,val kind:String,val amount:Long?,val refund:Long?,val currency:String?,val payment:String?,val installments:Long?,val status:String,val issue:String?,val version:Long,val ledger:String?,val original:String?,val source:String,val merchant:String?=null,val cardLabel:String?=null,val mappedCardName:String?=null){

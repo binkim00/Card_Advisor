@@ -23,7 +23,7 @@ try{
  if($Emulator){$adb=Join-Path $env:ANDROID_HOME 'platform-tools\adb.exe';if((& $adb -s $Device get-state 2>$null) -ne 'device'){throw 'Start the emulator first.'}
   Run-Step $adb @('-s',$Device,'install','-r',(Join-Path $projectRoot 'android\app\build\outputs\apk\debug\app-debug.apk')) 'verify-install.log';Run-Step $adb @('-s',$Device,'install','-r',(Join-Path $projectRoot 'android\app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk')) 'verify-install-test.log'
   $env:RUN_DEVICE_FREE_ANDROID_TEST='true';$env:RUN_CHECKOUT_ANDROID_PG_TEST='true';$env:RUN_ANDROID_LEDGER_DEVICE_TEST='true';$env:ANDROID_TEST_DEVICE=$Device
-  Push-Location (Join-Path $projectRoot 'backend');try{Run-Step $maven @('-B','-ntp','-Dtest=AndroidDeviceFreePostgresTest,AndroidReconciliationPostgresTest,AndroidMerchantMemoryPostgresTest,AndroidCheckoutRecommendationPostgresTest,AndroidLedgerDevicePostgresTest','test') 'verify-emulator.log'}finally{Pop-Location};$report.emulator=$true
+  Push-Location (Join-Path $projectRoot 'backend');try{Run-Step $maven @('-B','-ntp','-Dtest=AndroidDeviceFreePostgresTest,AndroidReconciliationPostgresTest,AndroidMerchantMemoryPostgresTest,AndroidCheckoutRecommendationPostgresTest,AndroidLedgerDevicePostgresTest,AndroidSyncAuthenticationPostgresTest,AndroidQualificationPostgresTest','test') 'verify-emulator.log'}finally{Pop-Location};$report.emulator=$true
  }
  $report.passed=$true
 }finally{foreach($name in $names){[Environment]::SetEnvironmentVariable($name,$saved[$name],'Process')};$report|ConvertTo-Json -Depth 5|Set-Content -LiteralPath (Join-Path $run 'device-free-verification.json') -Encoding utf8}

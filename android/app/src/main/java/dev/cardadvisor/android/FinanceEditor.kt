@@ -43,7 +43,7 @@ import java.util.UUID
    catch(e:ApiException){currentCoroutineContext().ensureActive();stale=true
     notice=when(e.status){
      401->{expired=true;clear();"로그인이 만료되었습니다. 나가기 후 다시 로그인해 주세요."}
-     409->"연결 상태가 변경되었습니다. 최신 연결을 조회한 뒤 다시 선택해 주세요."
+     409->if(e.code=="SYNC_AUTH_IN_PROGRESS")"거래 조회의 추가 인증이 진행 중입니다. 기간별 거래 화면에서 인증을 마치거나 대기 만료 후 다시 시도해 주세요." else "연결 상태가 변경되었습니다. 최신 연결을 조회한 뒤 다시 선택해 주세요."
      503->"금융 연결 서버가 준비되지 않았습니다. 저장된 연결 조회만 가능합니다."
      422->"기관 코드, 인증 입력과 동의를 확인해 주세요."
      else->"연결 정보를 불러오지 못했습니다. 최신 연결 조회로 다시 확인해 주세요."

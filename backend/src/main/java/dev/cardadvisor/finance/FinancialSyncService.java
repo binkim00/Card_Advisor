@@ -56,7 +56,7 @@ public class FinancialSyncService {
    // No undocumented pagination. An explicit <=31-day, all-card read with minimum merchant detail.
    var data=provider.approvals(cid,org,"",input.from(),input.to(),Map.of("inquiryType","1","orderBy","1","memberStoreInfoType","0")).data();
    importData(user,connection,work.run(),input,c,data);
-  }catch(CodefFailure e){if(e.challenge()!=null)holdAuthentication(user,connection,work.run(),input.expectedVersion(),e.challenge());else fail(user,work.run(),"CODEF_"+e.kind.name());}
+  }catch(CodefFailure e){if(e.challenge()!=null)holdAuthentication(user,connection,work.run(),input.expectedVersion(),e.challenge());else if(e.kind==CodefFailure.Kind.AUTH_REQUIRED)holdUnsupported(user,work.run());else fail(user,work.run(),"CODEF_"+e.kind.name());}
   catch(ApiError e){fail(user,work.run(),e.getMessage());}
   catch(IllegalArgumentException e){fail(user,work.run(),"INVALID_APPROVAL_RESPONSE");}
   catch(Exception e){fail(user,work.run(),"SYNC_RESULT_UNCONFIRMED");}
@@ -86,7 +86,9 @@ public class FinancialSyncService {
     db.update("UPDATE financial_sync_runs SET status=?,received=?,applied=?,held=?,finished_at=now() WHERE user_id=? AND id=?",held==0?"IMPORTED":"PARTIAL",rows.size(),applied,held,user,run);
    });
  }
+ private void holdUnsupported(UUID user,UUID run){tx.executeWithoutResult(status->{lock(user);db.update("UPDATE financial_sync_runs SET status='AUTH_UNKNOWN',error_code='CODEF_AUTH_METHOD_UNSUPPORTED',finished_at=now() WHERE user_id=? AND id=? AND status IN ('RUNNING','AUTH_PENDING')",user,run);db.update("UPDATE financial_sync_auth SET key_id=NULL,nonce=NULL,ciphertext=NULL,expires_at=now()+interval '3 minutes' WHERE user_id=? AND run_id=?",user,run);});}
  private void expireAuth(UUID user){
+  db.update("UPDATE financial_sync_runs SET status='FAILED',error_code='CODEF_AUTH_EXPIRED' WHERE user_id=? AND status='AUTH_UNKNOWN' AND error_code='CODEF_AUTH_METHOD_UNSUPPORTED' AND finished_at<=now()-interval '3 minutes'",user);
   db.update("UPDATE financial_sync_runs r SET status='FAILED',error_code='CODEF_AUTH_EXPIRED',finished_at=now() FROM financial_sync_auth a WHERE r.user_id=? AND a.user_id=r.user_id AND a.run_id=r.id AND a.expires_at<=now() AND r.status IN ('AUTH_REQUIRED','AUTH_PENDING','AUTH_UNKNOWN')",user);
   db.update("UPDATE financial_sync_auth a SET key_id=NULL,nonce=NULL,ciphertext=NULL FROM financial_sync_runs r WHERE a.user_id=? AND r.user_id=a.user_id AND r.id=a.run_id AND r.status IN ('FAILED','IMPORTED','PARTIAL')",user);
  }
@@ -121,7 +123,7 @@ public class FinancialSyncService {
     tx.executeWithoutResult(status->{lock(user);expireAuth(user);db.update("UPDATE financial_sync_runs SET status='RUNNING' WHERE user_id=? AND id=? AND status='AUTH_PENDING'",user,id);importData(user,connection,id,input,c,data);});
    }catch(CodefFailure e){
     if(e.challenge()!=null){tx.executeWithoutResult(status->{lock(user);expireAuth(user);db.update("UPDATE financial_sync_runs SET status='RUNNING' WHERE user_id=? AND id=? AND status='AUTH_PENDING'",user,id);holdAuthentication(user,connection,id,input.expectedVersion(),e.challenge());});}
-    else authFailed(user,id,"CODEF_"+e.kind.name(),e.kind==CodefFailure.Kind.UNKNOWN_OUTCOME);
+    else if(e.kind==CodefFailure.Kind.AUTH_REQUIRED)holdUnsupported(user,id);else authFailed(user,id,"CODEF_"+e.kind.name(),e.kind==CodefFailure.Kind.UNKNOWN_OUTCOME);
    }catch(ApiError e){authFailed(user,id,e.getMessage(),false);}catch(Exception e){authFailed(user,id,"CODEF_AUTH_RESULT_UNKNOWN",true);}
    return run(user,id);
   }finally{Arrays.fill(in.answer(),'\0');}

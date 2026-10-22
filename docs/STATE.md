@@ -6,6 +6,8 @@
 금액·실적·혜택·순위는 결정적 코드. 현재 자격과 다음 달 실적 분리, UNKNOWN≠0, 출처·기준 기간·버전 보존. 실제 상품의 미확인 조건을 임의로 0/인정/정산 완료로 바꾸지 않는다. no subagents. 관련 검사 후 기능 단위 로컬 commit, 원격 없음.
 
 ## 이번 완료
+- 미지원 CODEF 추가 인증도 3분 재요청 보류, 인증 대기 중 재인증/해제 차단. 계약/연결/PG110 통과, 최종 인증 에뮬레이터 재통과. 기존 API18080 UP·V29, 계정/세션/거래10표 동일 해시(원장187/금융190/매핑1).
+
 - 취소 후 예상 혜택과 실제 한도 복원을 분리, 복원 미확인분은 추천 잔여 한도에서 제외. 하나 체크카드 할부 실적 차단. 전체 backend300/Android JVM15·lint·빌드/에뮬레이터7묶음(앱9흐름) 통과. [근거](verification/2026-10-22-cancellation-cap.md).
 
 - V29 실제 카드 현재 자격: 전월 마감 인정액·출처·최초 사용 등록 유예 계산/API/Android, 구간 모순·버전 보호. 다음 달용 실적 보존. 관련45 검사와 에뮬레이터 저장/재조회/충돌 통과. [근거](verification/2026-10-22-actual-qualification.md).
@@ -21,9 +23,9 @@
 - V26 삭제등록부/암호화 구백업 복원 제외, SMTP TLS·prod HTTPS 검사, Android 보안/정적 검사 수정, 서명·CI·실행 구성, API 문서 정정과 추적표 갱신.
 
 ## 검증 근거
-백엔드 전체275 실패0/skip0, Android JVM15·lint 오류0·debug/androidTest/미서명release 빌드, 에뮬레이터 HTTP/PG5묶음(앱7흐름) 통과. 전체 결과 `.run/device-free-verification.json`, 날짜별 근거 [verification/2026-10-22-device-free-completion.md](verification/2026-10-22-device-free-completion.md). 상세 입력필드 API 문서 추가 검사는 최종 기록 참조.
+이전 기준 검증은 백엔드275 실패0/skip0, Android JVM15·lint 오류0·debug/androidTest/미서명release 빌드, 에뮬레이터 HTTP/PG5묶음(앱7흐름) 통과. 전체 결과 `.run/device-free-verification.json`, 날짜별 근거 [verification/2026-10-22-device-free-completion.md](verification/2026-10-22-device-free-completion.md). 상세 입력필드 API 문서 추가 검사는 최종 기록 참조.
 
-원 Docker/개인 DB54329 복구, 정상 API18080 UP·V27. 계정·세션 등10표 행 해시 보존, 원장187/금융190/상품매핑1 유지. 암호화 백업·격리 복원8표, 합성 삭제계정 구백업 제외 통과. Docker 재발 방지 영구 보장은 하지 않음. 이번 실제 외부 호출0·휴대폰 조작0.
+원 Docker/개인 DB54329 복구, 정상 API18080 UP·V29. 계정·세션 등10표 행 해시 보존, 원장187/금융190/상품매핑1 유지. 암호화 백업·격리 복원8표, 합성 삭제계정 구백업 제외 통과. Docker 재발 방지 영구 보장은 하지 않음. 이번 실제 외부 호출0·휴대폰 조작0.
 
 검증된 소스는 `c964ecd`, `228ca35`, `0421de5`, `c710a09`, `ccce5f2`, `0269270`, `febcb82`, `5156466`, `aae55b9`, `7b45ccc`, `557f782`, `0c51b9d`에 기능별 커밋. 후속 문서/자동화 커밋은 Git 로그가 기준. 원격 push 없음.
 
@@ -35,4 +37,4 @@
 - 원래 SlotTable 최초 예외 원인은 미확정, 관측·회귀검사는 보존. 상세 [SERVICE_GAPS.md](SERVICE_GAPS.md).
 
 ## 다음 행동 1개
-미지원 추가 인증 응답도 재요청 제한을 지키도록 보강하고 검증한 뒤 기존 데이터 보존 상태로 로컬 API를 갱신한다.
+과거 월의 자격 근거를 오늘 확인한 날짜로 저장할 수 있도록 확인일 검증을 수정·검증한다.

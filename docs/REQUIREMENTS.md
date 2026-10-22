@@ -7,10 +7,10 @@
 | FR-01 | 구현·로컬 검증 | AuthController, SessionService, AccountRecoveryService, SecureSessionStore | ServiceCompletionPostgresTest, AccountRecoveryPostgresTest, SmtpTlsContractTest | 실제 메일·운영 보호 확인 |
 | FR-02 | 지원 범위 구현 | CodefClient, FinancialConnectionService/ReconciliationService, FinanceEditor | FinancialConnectionsPostgresTest, FinancialReconciliationPostgresTest, ReconciliationFlowTest | 기관별 추가인증 지원 확인·실대조·하나 실연결 |
 | FR-03 | 구현·로컬 검증 | CardCatalogService, FinancialCardMappingService, CardProductsEditor | FinancialSyncPostgresTest, LedgerDeviceFlowTest | 상품 정책 개정·실명세 대조 |
-| FR-04 | 구현·로컬 검증 | card_month_states, AdvisorService, MonthlyStateEditor | ServiceCompletionPostgresTest, MonthlyStateTest | 공식 월자격 수치 대조 |
+| FR-04 | 구현·로컬 검증 | card_month_states, AdvisorService, ActualQualificationService/Editor, V29, MonthlyStateEditor | ServiceCompletionPostgresTest, ActualQualificationTest, AndroidQualificationPostgresTest, MonthlyStateTest | 공식 월자격 수치 대조 |
 | FR-05 | 구현·로컬 검증 | BudgetAllocation, AdvisorService, BudgetEditor | BudgetAllocationPostgresTest, DeviceFreeBudgetFlowTest | 실사용 관찰 |
 | FR-06 | 구현·로컬 검증 | FixedCostService/Calculator, FixedCostEditor, V24 | FixedAllocationPostgresTest, DeviceFreeBudgetFlowTest | 자동 연결은 하지 않으며 후보를 사용자가 선택 |
-| FR-07 | 지원 범위 구현 | CodefApprovalNormalizer, FinancialSyncService, FinanceSyncEditor | CodefClientContractTest, FinancialSyncPostgresTest | 하나 실기관·추가인증·외화 조건 |
+| FR-07 | 지원 범위 구현 | CodefApprovalNormalizer, FinancialSyncService/CodefChallenge, FinanceSyncEditor/Authentication, V28 | CodefClientContractTest, FinancialSyncPostgresTest, AndroidSyncAuthenticationPostgresTest | 실제 인증·미지원 인증 방식·외화 조건 |
 | FR-08 | 구현·로컬 검증 | AdvisorService, ClassificationEditor, MerchantRuleService, V23/V27 | BudgetAllocationPostgresTest, MerchantMemoryPostgresTest, MerchantMemoryFlowTest | 실제 데이터 분류 품질 |
 | FR-09 | 지원 범위 구현 | cancel, FinancialSyncService, PerformanceCalculator | FinancialSyncPostgresTest, LedgerDeviceFlowTest | 실제 상품 취소 정산·미매칭 1건 보류 |
 | FR-10 | 지원 범위 구현 | FinancialPerformanceService, FinancialPerformanceEditor, V20 | FinancialSyncPostgresTest, PerformanceCalculatorTest | 공식 실적·다른 상품 취소 귀속 |
@@ -18,7 +18,7 @@
 | FR-12 | 구현·합성 검증 | 쇼핑몰별 감지 어댑터, DetectionEditor | CheckoutRecommendationFlowTest, CheckoutTextParserTest / CheckoutCandidateStoreTest | 무신사 실제 주문 경로 |
 | FR-13 | 구현·로컬 검증 | Checkout, CheckoutConditions, MainActivity | CheckoutAllocationPostgresTest, DeviceFreeCheckoutInputTest | 미확인 결제 조건은 보류 |
 | FR-14 | 구현·로컬 검증 | CheckoutCandidateStore, AdvisorService, ApiClient | CheckoutRecommendationFlowTest, RecommendationEngineTest | 실제 쇼핑몰 이벤트 대조 |
-| FR-15 | 지원 범위 구현 | RecommendationEngine, ActualCardRules, ActualBenefitCalculator | RecommendationEngineTest, HanaGoBenefitsTest, LedgerDeviceFlowTest | 공식 근거 없는 정산/한도/적용순서 보류 |
+| FR-15 | 지원 범위 구현 | RecommendationEngine, ActualCardRules, ActualBenefitCalculator, FinancialBenefitService | RecommendationEngineTest, HanaGoBenefitsTest, LedgerDeviceFlowTest | 취소 한도 복원 미확인은 보수적 계산, 공식 정산/적용순서 대조 |
 | FR-16 | 구현·로컬 검증 | Budget/Result, categoryAfterByCode, 고정비/예산 요약 | CheckoutAllocationPostgresTest, DeviceFreeBudgetFlowTest | 실사용 관찰 |
 | FR-17 | 구현·합성 평가 | MerchantCategoryClassifier, MerchantRuleService, OpenAiGateway | CategoryEvaluationTest, OpenAiGatewayContractTest, MerchantMemoryFlowTest | 실제 AI 응답 품질·동의 후 호출 |
 | FR-18 | 구현·합성 검증 | AiAssistanceService, InsightsEditor | ServiceCompletionPostgresTest, OpenAiGatewayContractTest | 실제 AI 호출 품질 |
