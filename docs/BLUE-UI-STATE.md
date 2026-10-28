@@ -1,3 +1,11 @@
+# 2026-10-28 주요 화면·버튼 UX 갱신
+- 홈/공통 shell/그룹 설정/로그인 레이아웃과 추천 하단 고정 CTA 반영. 기존 handler·busy 차단·미확인값/오류 보존.
+- 합성 전용 .designreview APK를 emulator-5564에서 확인. UI6+탐색1 통과, JVM15, lint 오류0/경고16, 일반debug 빌드 성공. 실제 휴대폰·서버·개인 DB 변경 없음.
+- 현재 증거/범위: docs/verification/2026-10-28-app-design.md. screenshots outputs/design-review-20261028. 아래 기존 기기/API 기록은 과거 검증이며 이번 결과로 확대하지 않는다.
+- 다음 행동: 사용자 디자인 피드백 반영.
+
+---
+
 # Android 디자인 상태
 - 현재 목표: API 처리 뒤 완료/탐색 대기 실패 수정 — 완료.
 - 확정 결정: UI 작업 scope는 Dispatchers.Main.immediate, HTTP는 ApiClient의 IO. 실제 IO와 Compose 검사 실행 문맥이 섞여도 UI 상태/콜백을 Main에서 직렬화한다. 단순 시간 연장으로 통과시키지 않는다.

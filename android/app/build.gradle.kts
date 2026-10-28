@@ -15,6 +15,10 @@ android {
   }
   buildTypes.getByName("release").signingConfig=signingConfigs.getByName("privateRelease")
  }
+ buildTypes.getByName("debug") {
+  val previewSuffix=providers.gradleProperty("advisor.previewSuffix").orNull
+  if(previewSuffix!=null){require(previewSuffix==".designreview"){"Only the isolated design review suffix is supported"};applicationIdSuffix=previewSuffix}
+ }
  buildFeatures { compose=true; buildConfig=true }
  defaultConfig { buildConfigField("String","API_BASE_URL","\"http://127.0.0.1:18080\"") }
  buildTypes { getByName("release") {

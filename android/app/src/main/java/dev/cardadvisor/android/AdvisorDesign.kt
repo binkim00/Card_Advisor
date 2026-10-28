@@ -22,13 +22,16 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONArray
 import org.json.JSONObject
 
-private val Blue = Color(0xFF2563EB)
+private val Blue = Color(0xFF245CEB)
 private val Ink = Color(0xFF14213D)
 private val Pale = Color(0xFFEFF6FF)
 private val Line = Color(0xFFDCE6F2)
@@ -39,7 +42,7 @@ private val Line = Color(0xFFDCE6F2)
             primary = Blue, onPrimary = Color.White, primaryContainer = Color(0xFFDBEAFE),
             onPrimaryContainer = Color(0xFF1746A2), secondary = Color(0xFF536581),
             secondaryContainer = Pale, onSecondaryContainer = Ink,
-            background = Color(0xFFF4F6FA), onBackground = Ink,
+            background = Color(0xFFF5F6FA), onBackground = Ink,
             surface = Color.White, onSurface = Ink, surfaceVariant = Pale,
             onSurfaceVariant = Color(0xFF586781), outline = Color(0xFF8C9AB0),
             outlineVariant = Line, surfaceContainer = Color.White,
@@ -59,54 +62,76 @@ private val Line = Color(0xFFDCE6F2)
 @Composable internal fun AdvisorShell(
     loggedIn: Boolean, tab: Int, busyState: State<Boolean>, message: String,
     onNavigate: (Int) -> Unit, onLogout: () -> Unit,
+    primaryAction: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Scaffold(
+        modifier = Modifier.imePadding(),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (loggedIn) Surface(color = Color.White, tonalElevation = 0.dp, shadowElevation = 3.dp) {
-                // Scroll semantics also keep the existing instrumentation navigation helper compatible.
-                BoxWithConstraints(Modifier.fillMaxWidth().navigationBarsPadding()) {
-                val navigationWidth = maxWidth
-                Row(Modifier.horizontalScroll(rememberScrollState())) {
-                Row(Modifier.width(navigationWidth).padding(horizontal = 8.dp)) {
-                    listOf(7 to "홈", 1 to "추천", 2 to "가계부", 0 to "설정").forEach { (target, label) ->
-                        val selected = if (target == 0) (tab == 0 || (tab in 3..12 && tab != 7)) else tab == target
-                        NavigationBarItem(
-                            // Observe the state in this persistent Scaffold slot, not a captured Boolean.
-                            selected = selected, onClick = { onNavigate(target) }, enabled = !busyState.value,
-                            icon = { AdvisorNavIcon(target, selected) }, label = { Text(label, fontSize = 12.sp) },
-                            colors = NavigationBarItemDefaults.colors(indicatorColor = Pale, selectedIconColor = Blue, selectedTextColor = Blue),
-                            modifier = Modifier.widthIn(min = 72.dp).weight(1f)
-                        )
+            if (loggedIn) Surface(color = Color.White, tonalElevation = 0.dp) {
+                Column(Modifier.navigationBarsPadding()) {
+                    HorizontalDivider(color = Line.copy(alpha = .65f))
+                    // Keep a scroll ancestor for existing accessibility/test scroll-to actions.
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val barWidth = maxWidth
+                        if (primaryAction != null) Row(Modifier.horizontalScroll(rememberScrollState())) {
+                            Box(Modifier.width(barWidth).padding(horizontal = 22.dp, vertical = 12.dp)) {
+                                primaryAction()
+                            }
+                        }
+                        if (primaryAction == null) Spacer(Modifier.height(0.dp))
                     }
-                }
-                }
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val barWidth = maxWidth
+                        Row(Modifier.horizontalScroll(rememberScrollState())) {
+                            Row(Modifier.width(barWidth).height(80.dp).padding(horizontal = 8.dp)) {
+                                listOf(7 to "홈", 1 to "추천", 2 to "가계부", 0 to "설정").forEach { (target, label) ->
+                                    val selected = if (target == 0) (tab == 0 || (tab in 3..12 && tab != 7)) else tab == target
+                                    NavigationBarItem(
+                                        selected = selected, onClick = { onNavigate(target) }, enabled = !busyState.value,
+                                        icon = { AdvisorNavIcon(target, selected) },
+                                        label = { Text(label, fontSize = 12.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal) },
+                                        colors = NavigationBarItemDefaults.colors(indicatorColor = Pale, selectedIconColor = Blue, selectedTextColor = Blue),
+                                        modifier = Modifier.widthIn(min = 72.dp).weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     ) { padding ->
-        // Each destination owns its scroll position; navigating never leaves a new page halfway down.
         key(if (loggedIn) tab else -1) {
             Column(
-                Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(horizontal=22.dp,vertical=20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                        Text(when { !loggedIn -> "카드 어드바이저"; tab == 1 -> "결제 전 카드 추천"; tab == 2 -> "가계부"; tab==0 -> "설정"; tab==3 -> "실적과 혜택 자격"; tab==4 -> "월별 예산"; tab==5 -> "반복 고정비"; tab==6 -> "금융 연결"; tab==8 -> "계정과 동의"; tab==9 -> "내 카드"; tab==10 -> "소비 분석"; tab==11 -> "주문서 확인"; else -> "카드 어드바이저" }, style = MaterialTheme.typography.titleLarge)
-                        if(tab==7||!loggedIn)Text("결제 전, 나에게 맞는 선택", color = MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (tab == 7 || !loggedIn) Text("카드 어드바이저", color = Blue, style = MaterialTheme.typography.labelLarge)
+                        Text(when {
+                            !loggedIn -> "나에게 맞는 카드 생활"; tab == 7 -> "이번 달 소비"; tab == 1 -> "결제 전 카드 추천"; tab == 2 -> "가계부"; tab == 0 -> "설정"
+                            tab == 3 -> "실적과 혜택 자격"; tab == 4 -> "월별 예산"; tab == 5 -> "반복 고정비"; tab == 6 -> "금융 연결"
+                            tab == 8 -> "계정과 동의"; tab == 9 -> "내 카드"; tab == 10 -> "소비 분석"; tab == 11 -> "주문서 확인"; else -> "카드 어드바이저"
+                        }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp)
+                        if (tab == 7 && loggedIn) Text("예산부터 카드 혜택까지, 한눈에", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                     }
-                    if(loggedIn&&tab==7)IconButton(enabled=!busyState.value,onClick={onNavigate(0)}){AdvisorNavIcon(0,false)}
-                    else if(loggedIn&&tab==0)TextButton(enabled=!busyState.value,onClick=onLogout){Text("나가기",fontSize=12.sp)}
+                    if (loggedIn && tab == 7) IconButton(enabled = !busyState.value, onClick = { onNavigate(0) }, modifier = Modifier.semantics { contentDescription = "설정 열기" }) { AdvisorNavIcon(0, false) }
+                    else if (loggedIn && tab !in listOf(0, 1, 2, 7)) TextButton(enabled = !busyState.value, onClick = { onNavigate(0) }) { Text("설정으로") }
                 }
-                // Full messages remain accessible; quiet one-line status can be expanded for errors.
-                var noticeExpanded by remember(message){mutableStateOf(false)}
-                Text(message,modifier=Modifier.fillMaxWidth().clickable{noticeExpanded=!noticeExpanded},
-                    maxLines=if(noticeExpanded)Int.MAX_VALUE else 1,overflow=TextOverflow.Ellipsis,
-                    style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                // Remove only the initial technical placeholder; user messages and errors remain visible.
+                if (message.isNotBlank() && message != "로컬 개발용 · 가상 카드 규칙으로 계산합니다.") {
+                    var expanded by remember(message) { mutableStateOf(false) }
+                    Surface(color = Pale, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }) {
+                        Text(message, modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp), maxLines = if (expanded) Int.MAX_VALUE else 2,
+                            overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 if (busyState.value) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Blue, trackColor = Line)
                 content()
+                if (loggedIn && tab == 0) TextButton(enabled = !busyState.value, onClick = onLogout, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("나가기", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -134,29 +159,30 @@ private val Line = Color(0xFFDCE6F2)
 
 private fun designWon(value: Long) = "%,d원".format(java.util.Locale.KOREA, value)
 @Composable internal fun HomeBudget(summary: JSONObject?, busy: Boolean, onBudget: () -> Unit, onRefresh: () -> Unit) {
-    Surface(shape=RoundedCornerShape(28.dp),modifier=Modifier.fillMaxWidth(),color=Blue){
-        Column(Modifier.background(Brush.linearGradient(listOf(Color(0xFF123B91),Color(0xFF2869E8)))).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
-                Text("이번 달 남은 예산",color=Color(0xFFDCE8FF),style=MaterialTheme.typography.labelLarge)
-                Text("예산 관리 ›",color=Color.White,style=MaterialTheme.typography.labelMedium,modifier=Modifier.clickable(enabled=!busy,onClick=onBudget).padding(vertical=8.dp))
+    Surface(shape = RoundedCornerShape(26.dp), modifier = Modifier.fillMaxWidth(), color = Color.White) {
+        Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("이번 달 남은 예산", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                TextButton(enabled = !busy, onClick = onBudget, contentPadding = PaddingValues(horizontal = 4.dp)) { Text("예산 관리 ›", fontSize = 12.sp) }
             }
-            if(summary==null){
-                Text("예산을 불러와 주세요",color=Color.White,style=MaterialTheme.typography.titleLarge)
-                TextButton(enabled=!busy,onClick=onRefresh,colors=ButtonDefaults.textButtonColors(contentColor=Color.White)){Text("현황 새로고침")}
-            }else{
-                val remaining=summary.getLong("remainingWon");val total=summary.getLong("totalWon");val spent=summary.getLong("spentWon")
-                Text(designWon(remaining),style=MaterialTheme.typography.headlineLarge.copy(fontWeight=FontWeight.Bold,letterSpacing=(-1).sp),color=Color.White)
-                if(total>0)LinearProgressIndicator(progress={(spent.toFloat()/total).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(6.dp),color=Color(0xFF9DC5FF),trackColor=Color.White.copy(alpha=.18f))
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                    Text("사용 "+designWon(spent),style=MaterialTheme.typography.bodySmall,color=Color(0xFFDCE8FF))
-                    Text("전체 "+designWon(total),style=MaterialTheme.typography.bodySmall,color=Color(0xFFDCE8FF))
+            if (summary == null) {
+                Text("예산을 불러와 주세요", style = MaterialTheme.typography.titleLarge)
+                TextButton(enabled = !busy, onClick = onRefresh) { Text("현황 새로고침") }
+            } else {
+                val remaining = summary.getLong("remainingWon"); val total = summary.getLong("totalWon"); val spent = summary.getLong("spentWon")
+                Text(designWon(remaining), style = MaterialTheme.typography.headlineLarge.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.4).sp), color = Ink)
+                if (total > 0) LinearProgressIndicator(progress = { (spent.toFloat() / total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(6.dp), color = Blue, trackColor = Pale)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("사용 " + designWon(spent), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("전체 " + designWon(total), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                HorizontalDivider(color=Color.White.copy(alpha=.18f))
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                    Text("미반영 고정비",color=Color(0xFFDCE8FF),style=MaterialTheme.typography.bodySmall)
-                    Text(designWon(summary.getLong("fixedRemainingWon")),color=Color.White,style=MaterialTheme.typography.labelLarge)
+                Surface(color = MaterialTheme.colorScheme.background, shape = RoundedCornerShape(12.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("미반영 고정비", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(designWon(summary.getLong("fixedRemainingWon")), style = MaterialTheme.typography.labelLarge, color = Ink)
+                    }
                 }
-                if(summary.optLong("pendingFinancialTransactions",0)>0)Text("보류 금융 거래 ${summary.getLong("pendingFinancialTransactions")}건 · 확인된 지출 기준",color=Color(0xFFFFE3AB),style=MaterialTheme.typography.bodySmall)
+                if (summary.optLong("pendingFinancialTransactions", 0) > 0) Text("보류 금융 거래 ${summary.getLong("pendingFinancialTransactions")}건 · 확인된 지출 기준", color = Color(0xFF976012), style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -228,26 +254,47 @@ private fun designWon(value: Long) = "%,d원".format(java.util.Locale.KOREA, val
 }
 
 /** All shortcuts keep their real navigation callbacks. No decorative inactive controls. */
-@Composable internal fun ServiceMenu(title:String,detail:String,enabled:Boolean=true,onClick:()->Unit){
-    Surface(onClick=onClick,enabled=enabled,shape=RoundedCornerShape(20.dp),color=Color.White,modifier=Modifier.fillMaxWidth()){
-        Row(Modifier.padding(20.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)){
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
-                Text(title,fontWeight=FontWeight.SemiBold,style=MaterialTheme.typography.bodyLarge)
-                Text(detail,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+private val LocalGroupedMenu = staticCompositionLocalOf { false }
+
+@Composable internal fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, modifier = Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Surface(color = Color.White, shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
+            CompositionLocalProvider(LocalGroupedMenu provides true) {
+                Column(Modifier.padding(vertical = 4.dp), content = content)
             }
-            Text("›",fontSize=26.sp,color=Color(0xFF9AA8BB))
         }
     }
 }
-@Composable internal fun CompareCallout(enabled:Boolean,onClick:()->Unit){
-    Surface(onClick=onClick,enabled=enabled,color=Color.White,shape=RoundedCornerShape(24.dp),modifier=Modifier.fillMaxWidth()){
-        Row(Modifier.padding(22.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){
-            Surface(shape=RoundedCornerShape(16.dp),color=Pale){Box(Modifier.size(52.dp),contentAlignment=Alignment.Center){AdvisorNavIcon(1,true)}}
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
-                Text("결제 전 카드 비교",fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium)
-                Text("이번 혜택과 다음 달 실적을 함께",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+
+@Composable internal fun ServiceMenu(title: String, detail: String, enabled: Boolean = true, onClick: () -> Unit) {
+    val grouped = LocalGroupedMenu.current
+    Surface(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(if (grouped) 0.dp else 20.dp), color = Color.White, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(color = Pale, shape = RoundedCornerShape(12.dp)) {
+                Box(Modifier.size(38.dp), contentAlignment = Alignment.Center) { AdvisorNavIcon(if (title.contains("카드") || title.contains("금융")) 1 else if (title.contains("계정") || title.contains("동의")) 0 else 2, true) }
             }
-            Text("›",color=Blue,fontSize=26.sp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            }
+            Text("›", fontSize = 24.sp, color = Color(0xFF9AA8BB))
+        }
+    }
+}
+
+@Composable internal fun CompareCallout(enabled: Boolean, onClick: () -> Unit) {
+    Surface(onClick = onClick, enabled = enabled, color = Blue, shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Canvas(Modifier.size(32.dp)) {
+                drawRoundRect(Color.White, topLeft = Offset(2.dp.toPx(), 5.dp.toPx()), size = androidx.compose.ui.geometry.Size(size.width - 4.dp.toPx(), size.height - 10.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(5.dp.toPx()), style = Stroke(1.7.dp.toPx()))
+                drawLine(Color.White, Offset(3.dp.toPx(), 13.dp.toPx()), Offset(size.width - 3.dp.toPx(), 13.dp.toPx()), strokeWidth = 1.7.dp.toPx())
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("결제 전 카드 비교", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = Color.White)
+                Text("이번 혜택과 다음 달 실적을 함께", style = MaterialTheme.typography.bodySmall, color = Color(0xFFDDE7FF))
+            }
+            Text("›", color = Color.White, fontSize = 26.sp)
         }
     }
 }

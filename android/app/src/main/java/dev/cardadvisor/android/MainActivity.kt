@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -145,22 +146,19 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
  LaunchedEffect(expiresAt){if(expiresAt>0){while(System.currentTimeMillis()<expiresAt){delay(500)};result=null;message="추천이 만료되었습니다. 주문 금액을 다시 확인해 주세요."}}
  LaunchedEffect(checkoutRequest,loggedIn){if(checkoutRequest>0&&loggedIn)tab=11}
  LaunchedEffect(loggedIn,tab){if(loggedIn&&tab in listOf(7,2))runTask{invalidate();refreshLedger()}}
- AdvisorShell(loggedIn,tab,busyState,message,onNavigate={if(tab==1&&it!=1)invalidate();tab=it;manualExpanded=false;statsExpanded=false;detailId=null},onLogout={runTask{var logoutConfirmed=true;try{api.request("/v1/auth/logout","POST")}catch(e:Exception){logoutConfirmed=e is ApiException&&e.status==401};api.clearSession();loggedIn=false;invalidate();ledger=JSONArray();budgetSummary=null;editEntry=null;cardStates=JSONArray();selectedCardId=null;manualExpanded=false;statsExpanded=false;detailId=null;tab=7;message=if(logoutConfirmed)"로그아웃했습니다." else "기기에서 로그아웃했습니다. 서버 세션 종료는 확인되지 않았습니다."}}){
+ AdvisorShell(loggedIn,tab,busyState,message,onNavigate={if(tab==1&&it!=1)invalidate();tab=it;manualExpanded=false;statsExpanded=false;detailId=null},onLogout={runTask{var logoutConfirmed=true;try{api.request("/v1/auth/logout","POST")}catch(e:Exception){logoutConfirmed=e is ApiException&&e.status==401};api.clearSession();loggedIn=false;invalidate();ledger=JSONArray();budgetSummary=null;editEntry=null;cardStates=JSONArray();selectedCardId=null;manualExpanded=false;statsExpanded=false;detailId=null;tab=7;message=if(logoutConfirmed)"로그아웃했습니다." else "기기에서 로그아웃했습니다. 서버 세션 종료는 확인되지 않았습니다."}},primaryAction=if(loggedIn&&tab==1){{Button(enabled=!busy,shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().heightIn(min=54.dp).testTag("compareCards"),onClick={compareCards()}){Text("금액 확인 후 카드 비교")}}}else null){
   if(restoringSession){LinearProgressIndicator(Modifier.fillMaxWidth());Text("저장된 로그인을 확인하고 있습니다.")}else if(!loggedIn){
    DesignPanel {
-   Text("소비 전에, 더 나은 선택",style=MaterialTheme.typography.titleLarge)
-   Text("예산과 실적을 확인하고 결제할 카드를 비교해 보세요.")
-   Text("내 계정으로 시작하기",style=MaterialTheme.typography.titleMedium)
-   OutlinedTextField(email,{email=it;authError=null},label={Text("이메일")},singleLine=true,modifier=Modifier.fillMaxWidth().testTag("email"))
-   OutlinedTextField(password,{password=it;authError=null},label={Text("비밀번호 · 12~128자")},visualTransformation=PasswordVisualTransformation(),singleLine=true,modifier=Modifier.fillMaxWidth().testTag("password"))
+   Text("반가워요",style=MaterialTheme.typography.titleLarge)
+   Text("내 카드와 예산을 한곳에서 관리해 보세요.",color=MaterialTheme.colorScheme.onSurfaceVariant)
+   OutlinedTextField(email,{email=it;authError=null},label={Text("이메일")},shape=androidx.compose.foundation.shape.RoundedCornerShape(14.dp),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email),singleLine=true,modifier=Modifier.fillMaxWidth().testTag("email"))
+   OutlinedTextField(password,{password=it;authError=null},label={Text("비밀번호 · 12~128자")},shape=androidx.compose.foundation.shape.RoundedCornerShape(14.dp),visualTransformation=PasswordVisualTransformation(),singleLine=true,modifier=Modifier.fillMaxWidth().testTag("password"))
    Text("앱 계정용 비밀번호는 12~128자입니다. 카드사 로그인 정보는 금융 연결 화면에서 별도로 입력합니다.",style=MaterialTheme.typography.bodySmall)
    authError?.let{Text(it,color=MaterialTheme.colorScheme.error,modifier=Modifier.fillMaxWidth().testTag("authError").semantics{liveRegion=LiveRegionMode.Polite})}
    if(busy)Text("가입·로그인 정보를 확인하고 있습니다.",Modifier.testTag("authPending"))
-   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-    Button(enabled=!busy,onClick={authenticate(true)}){Text("가입")}
-    OutlinedButton(enabled=!busy,onClick={authenticate(false)}){Text("로그인")}
-    TextButton(enabled=!busy,onClick={passwordRecovery=true},modifier=Modifier.testTag("passwordRecoveryOpen")){Text("비밀번호 찾기")}
-   }
+   Button(enabled=!busy,onClick={authenticate(false)},shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)){Text("로그인")}
+   OutlinedButton(enabled=!busy,onClick={authenticate(true)},shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)){Text("가입")}
+   TextButton(enabled=!busy,onClick={passwordRecovery=true},modifier=Modifier.align(Alignment.End).testTag("passwordRecoveryOpen")){Text("비밀번호 찾기")}
    }
   }else{
    if(offline){DesignPanel{Text("오프라인 · 저장된 최근 내역",modifier=Modifier.testTag("offlineBanner"));Text("저장·새 추천은 연결 후 가능합니다. 마지막 갱신: "+(lastUpdated?.let{Instant.ofEpochMilli(it).atZone(ZoneId.of("Asia/Seoul")).format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))}?:"없음"));OutlinedButton(enabled=!busy,onClick={runTask{refreshLedger();message=if(api.offline.value)"아직 서버에 연결되지 않았습니다." else "최신 내역으로 갱신했습니다."}}){Text("연결 다시 확인")}}}
@@ -170,10 +168,11 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
      HomeBudget(budgetSummary,busy,onBudget={budgetEditingMonth=null;tab=4},onRefresh={runTask{invalidate();refreshLedger()}})
      CompareCallout(!busy){tab=1}
      DashboardCards(cardStates,onEdit={tab=3},enabled=!busy)
+     SettingsGroup("더 편하게 관리하기"){
      ServiceMenu("내 실제 카드 등록","보유 상품을 선택하고 금융 카드와 연결해요",!busy){tab=9}
-     Text("소비를 더 편하게",style=MaterialTheme.typography.titleLarge)
      ServiceMenu("쇼핑 주문서 감지","결제 정보를 확인하고 카드 비교로 이어가요",!busy){tab=11}
      ServiceMenu("소비 분석·예산 제안","지출을 돌아보고 다음 소비를 준비해요",!busy){tab=10}
+     }
      if(cardStates.length()==0)ExpandablePanel("가상 데이터로 둘러보기"){
       Text("실제 카드와 구분된 테스트 데이터로 기능을 확인합니다.")
       Button(enabled=!busy,onClick={runTask{api.request("/v1/demo/setup","POST");refreshLedger();invalidate();message="가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다."}}){Text("가상 데이터 준비")}
@@ -188,17 +187,20 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
     4->BudgetEditor(api,onBusyChanged={busy=it},onInvalidated={invalidate();budgetSummary=null},onChanged={refreshLedger()},initialMonth=budgetEditingMonth)
     3->MonthlyStateEditor(api,onBusyChanged={busy=it},onChanged={invalidate();refreshPerformance()})
     0->{
-     Text("카드와 금융",style=MaterialTheme.typography.titleMedium)
+     SettingsGroup("카드와 금융"){
      ServiceMenu("내 실제 카드 등록","보유 카드 상품 관리",!busy){tab=9}
      ServiceMenu("금융 연결 관리","카드사 연결 · 이용내역 가져오기",!busy){tab=6}
      ServiceMenu("월별 실적·자격 수정","이번 혜택 자격과 다음 달 실적",!busy){tab=3}
-     Text("소비 관리",style=MaterialTheme.typography.titleMedium)
+     }
+     SettingsGroup("소비 관리"){
      ServiceMenu("월별 예산 수정","전체 예산 · 카테고리별 한도",!busy){budgetEditingMonth=null;tab=4}
      ServiceMenu("반복 고정비 관리","정기 지출 일정과 거래 연결",!busy){tab=5}
      ServiceMenu("소비 분석·예산 제안","소비 패턴을 확인해요",!busy){tab=10}
      ServiceMenu("쇼핑 주문서 감지","주문서 확인 및 권한 설정",!busy){tab=11}
-     Text("앱 설정",style=MaterialTheme.typography.titleMedium)
+     }
+     SettingsGroup("앱 설정"){
      ServiceMenu("동의·계정 관리","선택 기능 동의 · 계정 삭제",!busy){tab=8}
+     }
      ExpandablePanel("가상 데이터로 기능 확인"){
       Text("실제 카드와 구분된 A·B 카드로 기능을 확인합니다.")
       Button(enabled=!busy,onClick={runTask{api.request("/v1/demo/setup","POST");refreshPerformance();invalidate();message="가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다."}}){Text("가상 데이터 준비")}
@@ -231,7 +233,6 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
      recommendationId?.let{id->OutlinedButton(enabled=!busy,onClick={runTask{val response=JSONObject(api.request("/v1/recommendations/$id/explanation","POST"));if(id==recommendationId)explanation=response}},modifier=Modifier.testTag("recommendationExplain")){Text("추천 이유 확인")}}
      explanation?.let{DesignPanel{AssistanceView(it)}}
      if(result==null) EmptyRecommendation()
-     Button(enabled=!busy,shape=androidx.compose.foundation.shape.RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth().heightIn(min=52.dp).testTag("compareCards"),onClick={compareCards()}){Text("금액 확인 후 카드 비교")}
      Text(if(actualMode)"약관 기반 예상 · 실제 결제는 쇼핑몰에서 진행" else "가상 규칙으로 계산 · 실제 결제는 쇼핑몰에서 진행",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
     2->{
