@@ -45,10 +45,10 @@ internal fun sourceLabel(source:String)=when(source){
  }
  suspend fun load(){
   val wanted=selected?.getString("id")
-  val response=JSONArray(api.request("/v1/cards/performance?month=$month"))
+  val all=JSONArray(api.request("/v1/cards/performance?month=$month"));val response=JSONArray().apply{for(i in 0 until all.length()){val row=all.getJSONObject(i);if(row.optString("benefitRuleVersion")!="IMPORTED_UNVERIFIED")put(row)}}
   val profiles=JSONArray(api.request("/v1/cards"));actualIds=(0 until profiles.length()).map{profiles.getJSONObject(it)}.filter{it.optString("source").startsWith("OFFICIAL_")}.map{it.getString("id")}.toSet()
   cards=response;loadedMonth=month
-  if(response.length()==0){selected=null;notice="등록된 카드가 없습니다. 설정에서 가상 데이터를 준비해 주세요."}
+  if(response.length()==0){selected=null;notice="실적을 편집할 카드가 없습니다. 혜택 규칙이 미확인인 보유 카드는 계산·편집에서 제외합니다."}
   else {adopt((0 until response.length()).map{response.getJSONObject(it)}.firstOrNull{it.getString("id")==wanted}?:response.getJSONObject(0));notice="저장된 월별 값을 불러왔습니다."}
  }
  fun action(block:suspend()->Unit){

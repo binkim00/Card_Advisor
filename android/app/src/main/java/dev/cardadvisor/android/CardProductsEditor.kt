@@ -8,6 +8,7 @@ import kotlinx.coroutines.*
 import org.json.*
 
 @Composable internal fun CardProductsEditor(api:ApiClient,onBusyChanged:(Boolean)->Unit,onChanged:suspend()->Unit,onEditMonth:()->Unit,onOpenFinance:(String)->Unit={},onImport:()->Unit={}){
+ var importing by remember{mutableStateOf(false)}
  val scope=rememberCoroutineScope { Dispatchers.Main.immediate }
  var products by remember{mutableStateOf(JSONArray())};var cards by remember{mutableStateOf(JSONArray())}
  var linkedCounts by remember{mutableStateOf<Map<String,Int>?>(null)}
@@ -18,10 +19,11 @@ import org.json.*
   linkedCounts=try{val counts=mutableMapOf<String,Int>();val connections=JSONArray(api.request("/v1/finance/connections"));for(i in 0 until connections.length()){val connection=connections.getJSONObject(i);val groups=JSONObject(api.request("/v1/finance/connections/"+connection.getString("id")+"/card-mappings")).getJSONArray("groups");for(j in 0 until groups.length()){val group=groups.getJSONObject(j);if(!group.isNull("cardId")){val id=group.getString("cardId");counts[id]=(counts[id]?:0)+1}}};counts}catch(e:CancellationException){throw e}catch(e:Exception){null}
   notice="상품 등록과 금융 카드 연결은 별도입니다. 연결 상태를 확인하고 저장해 주세요."
  }
+ if(importing){HeldCardsEditor(api,onBusyChanged,onChanged={onChanged()},onClose={importing=false;action{load()}},onConnect=onImport);return}
  LaunchedEffect(Unit){action{load()}}
  Text("내 카드",style=MaterialTheme.typography.titleLarge)
- Button(enabled=!busy,onClick=onImport,modifier=Modifier.fillMaxWidth().testTag("importMyCards")){Text("카드사 연결하기")}
- Text("카드사를 연결하면 이용내역에 나타난 카드를 확인할 수 있어요. 보유 카드 전체를 자동 등록하는 기능은 아직 준비 중입니다.")
+ Button(enabled=!busy,onClick={importing=true},modifier=Modifier.fillMaxWidth().testTag("importMyCards")){Text("보유 카드 불러오기")}
+ Text("카드사에서 보유 카드를 조회하고 본인 카드를 확인해 등록하세요. 혜택 상품 연결은 직접 확인한 경우에만 적용합니다.")
  RegisteredCards(cards,linkedCounts)
  ExpandablePanel("카드 직접 추가하기"){
  Text("아래는 혜택 규칙을 확인한 상품 목록입니다. 보유 카드 목록이 아니며, 다른 카드의 혜택을 임의로 적용하지 않습니다.")
@@ -68,11 +70,12 @@ import org.json.*
 
 @Composable internal fun RegisteredCards(cards:JSONArray,linkedCounts:Map<String,Int>?){
  Text("등록한 카드",style=MaterialTheme.typography.titleMedium)
- val owned=(0 until cards.length()).map{cards.getJSONObject(it)}.filter{it.optString("source").startsWith("OFFICIAL_")}
+ val owned=(0 until cards.length()).map{cards.getJSONObject(it)}.filter{it.optString("source").startsWith("OFFICIAL_")||it.optString("source")=="IMPORTED_UNVERIFIED"}
  if(owned.isEmpty())DesignPanel{Text("아직 등록한 카드가 없어요");Text("카드사를 연결하거나 아래에서 실제 보유한 상품을 직접 추가해 주세요.")}
  owned.forEach{card->DesignPanel{
   Text(card.getString("name"),style=MaterialTheme.typography.titleMedium)
+  if(card.optString("source")=="IMPORTED_UNVERIFIED")Text("보유 카드 등록됨 · 혜택 규칙 미확인, 추천·실적 계산 제외")
   val count=linkedCounts?.get(card.getString("id"))?:if(linkedCounts!=null)0 else null
-  Text(when{count==null->"연결 상태 확인 필요";count==0->"직접 등록 · 카드사 연결 전";else->"카드사 연결 ${count}개"})
+  if(card.optString("source")!="IMPORTED_UNVERIFIED")Text(when{count==null->"연결 상태 확인 필요";count==0->"직접 등록 · 카드사 연결 전";else->"카드사 연결 ${count}개"})
  }}
 }

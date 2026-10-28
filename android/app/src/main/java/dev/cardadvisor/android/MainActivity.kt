@@ -30,6 +30,7 @@ class MainActivity:ComponentActivity(){
 private fun won(n:Long)="%,d원".format(n)
 private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else won(o.getLong(key))
 @Composable private fun PerformanceSummary(c:JSONObject){
+ if(c.optString("benefitRuleVersion")=="IMPORTED_UNVERIFIED"){Text(c.getString("name"));Text("보유 카드 등록됨 · 혜택 규칙 미확인");Text("추천·실적·혜택 계산에서 제외합니다. 확인된 상품을 직접 연결한 경우에만 계산할 수 있습니다.");return}
  if(c.optString("benefitRuleVersion").startsWith("OFFICIAL_")){ActualCardSummary(c);return}
  Text(c.getString("name")+" · 이번 혜택 자격 "+if(c.isNull("currentQualified"))"미확인" else if(c.getBoolean("currentQualified"))"충족" else "미충족")
  Text("현재 자격 기준: "+c.getString("qualificationPeriod")+" · "+sourceLabel(c.optString("currentQualificationSource")))
@@ -243,7 +244,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
      PaymentFields(order,points,money,{order=it;factsConfirmed=false;manualFactsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{points=it;factsConfirmed=false;manualFactsConfirmed=false;confirmedDetectionGeneration=null;invalidate()},{money=it;factsConfirmed=false;manualFactsConfirmed=false;confirmedDetectionGeneration=null;invalidate()})
      Text("실제로 사용한 카드를 선택해 주세요. 추천 조회는 실적에 반영되지 않습니다.")
      for(i in 0 until cardStates.length()){val c=cardStates.getJSONObject(i)
-      if(c.optString("benefitRuleVersion").startsWith("OFFICIAL_")!=actualMode)continue
+      if(c.optString("benefitRuleVersion")=="IMPORTED_UNVERIFIED"||c.optString("benefitRuleVersion").startsWith("OFFICIAL_")!=actualMode)continue
       FilterChip(selected=selectedCardId==c.getString("id"),onClick={selectedCardId=c.getString("id");manualFactsConfirmed=false},enabled=!busy,label={Text(c.getString("name")+" 사용")})
 
      }
@@ -272,7 +273,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
       Text("취소 반영 "+won(item.getLong("amount_won")-item.getLong("net_won")))
       Text("남은 지출 "+won(item.getLong("net_won")),style=MaterialTheme.typography.titleLarge,color=MaterialTheme.colorScheme.primary)
       Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-       for(j in 0 until cardStates.length()){val card=cardStates.getJSONObject(j);FilterChip(selected=selectedCardId==card.getString("id"),enabled=!busy,onClick={selectedCardId=card.getString("id")},label={Text(card.getString("name"))})}
+       for(j in 0 until cardStates.length()){val card=cardStates.getJSONObject(j);if(card.optString("benefitRuleVersion")=="IMPORTED_UNVERIFIED")continue;FilterChip(selected=selectedCardId==card.getString("id"),enabled=!busy,onClick={selectedCardId=card.getString("id")},label={Text(card.getString("name"))})}
       }
       Text("계산 연결 카드: "+if(item.isNull("card_name"))"미연결 · 실적 미반영" else item.getString("card_name"))
       if(!item.isNull("financial_status"))Text("표시된 금융 카드 상품과 계산 연결은 별개입니다. 실제 금융 거래의 실적·혜택은 검수 전 미확인입니다.",style=MaterialTheme.typography.bodySmall)

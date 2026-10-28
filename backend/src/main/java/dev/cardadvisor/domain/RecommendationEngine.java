@@ -5,11 +5,11 @@ import java.util.stream.*;
 
 public final class RecommendationEngine {
  public enum Mode { BENEFIT, PERFORMANCE, BALANCED }
- public record Card(String id, String name, int rateBp, Boolean qualified, Long performanceWon,
+ public record Card(String id, String name, Integer rateBp, Boolean qualified, Long performanceWon,
                     Long targetWon, Long remainingCapWon, Boolean performanceEligible, String source) {
   public Card {
    Objects.requireNonNull(id); Objects.requireNonNull(name); Objects.requireNonNull(source);
-   if(rateBp<0 || rateBp>10000 || negative(performanceWon)||negative(targetWon)||negative(remainingCapWon))
+   if((rateBp==null&&!"IMPORTED_UNVERIFIED".equals(source)) || rateBp!=null&&(rateBp<0 || rateBp>10000) || negative(performanceWon)||negative(targetWon)||negative(remainingCapWon))
     throw new IllegalArgumentException("INVALID_CARD_STATE");
   }
  }

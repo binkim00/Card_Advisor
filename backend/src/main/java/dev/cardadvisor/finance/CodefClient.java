@@ -126,7 +126,7 @@ public final class CodefClient {
   if(matches>1)throw new CodefFailure(INVALID_RESPONSE);return matches==1;
  }
  public UnmappedData cards(String cid,String organization,String birthDate){
-  var request=lookup(cid,organization,birthDate);return new UnmappedData(call("/v1/kr/card/p/account/card-list",request,false));
+  var request=lookup(cid,organization,birthDate);request.put("inquiryType","0");return new UnmappedData(call("/v1/kr/card/p/account/card-list",request,false));
  }
  public UnmappedData approvals(String cid,String organization,String birthDate,LocalDate from,LocalDate to,Map<String,String> options){
   if(from==null||to==null||from.isAfter(to))throw new CodefFailure(CONFIGURATION);

@@ -21,7 +21,7 @@ public class AdvisorService {
   db.update("INSERT INTO deleted_user_tombstones(user_id) VALUES (?) ON CONFLICT DO NOTHING",u);
   db.update("DELETE FROM app_users WHERE id=?",u);return Map.of("localDataDeleted",true,"externalConnections","NONE_REMAINING");}
  private List<Card> profiles(UUID u){return db.queryForList("SELECT payload FROM cards WHERE user_id=? ORDER BY payload->>'name',id",u).stream().map(r->decode(r.get("payload"),Card.class)).toList();}
- private Card profile(UUID u,UUID id){return decode(one("SELECT payload FROM cards WHERE user_id=? AND id=?",u,id).get("payload"),Card.class);}
+ private Card profile(UUID u,UUID id){var c=decode(one("SELECT payload FROM cards WHERE user_id=? AND id=?",u,id).get("payload"),Card.class);if("IMPORTED_UNVERIFIED".equals(c.source()))throw new ApiError(422,"PRODUCT_RULES_NOT_VERIFIED");return c;}
  private String currentMonth(){return YearMonth.now(ZoneId.of("Asia/Seoul")).toString();}
  public record MonthStateInput(Long untrackedPerformanceWon,Boolean currentQualified,Long remainingCapWon,Long version,
    String untrackedSource,LocalDate untrackedAsOf,String qualificationSource,LocalDate qualificationAsOf,String qualificationPeriod){
@@ -37,6 +37,7 @@ public class AdvisorService {
    Boolean currentQualified,Long untrackedPerformanceWon,Long ledgerPerformanceWon,Long performanceWon,Long targetWon,
    Long gapWon,Boolean nextMonthThresholdMet,Long remainingCapWon,long stateVersion,String performanceSource,String currentQualificationSource,String cancellationPolicy,String untrackedSource,String untrackedAsOf,String qualificationAsOf,Long baseRemainingCapWon,Long ledgerBenefitUsedWon,String benefitSource,String benefitRuleVersion){}
  public MonthStateInput saveMonthState(UUID u,UUID id,String m,MonthStateInput in){lock(u);Card cardProfile=profile(u,id);
+  if("IMPORTED_UNVERIFIED".equals(cardProfile.source()))throw new ApiError(422,"PRODUCT_RULES_NOT_VERIFIED");
   LocalDate from=month(m);String period=YearMonth.from(from).minusMonths(1).toString();
   if(in.version()==null||in.version()<0)throw new ApiError(422,"VERSION_REQUIRED");
   boolean legacy=in.untrackedSource()==null&&in.qualificationSource()==null&&in.untrackedAsOf()==null&&in.qualificationAsOf()==null&&in.qualificationPeriod()==null;
@@ -58,7 +59,9 @@ public class AdvisorService {
  }
  public List<CardPerformance> performance(UUID u,String m){lock(u);LocalDate from=month(m);var out=new ArrayList<CardPerformance>();
   for(Card c:profiles(u)){
-   UUID id=UUID.fromString(c.id());var rows=db.queryForList("SELECT * FROM card_month_states WHERE user_id=? AND card_id=? AND month=?",u,id,from);
+   UUID id=UUID.fromString(c.id());
+   if("IMPORTED_UNVERIFIED".equals(c.source())){out.add(new CardPerformance(c.id(),c.name(),m,YearMonth.parse(m).minusMonths(1).toString(),YearMonth.parse(m).plusMonths(1).toString(),null,null,null,null,null,null,null,null,0,"UNKNOWN","UNKNOWN","UNKNOWN","UNKNOWN",null,null,null,null,"UNKNOWN",c.source()));continue;}
+   var rows=db.queryForList("SELECT * FROM card_month_states WHERE user_id=? AND card_id=? AND month=?",u,id,from);
    var state=rows.isEmpty()?Map.<String,Object>of():rows.get(0);
    if(ActualCardRules.actual(c.source())){out.add(catalog.performance(u,c,m,state));continue;}
    Long baseline=state.get("untracked_performance_won")==null?null:((Number)state.get("untracked_performance_won")).longValue();

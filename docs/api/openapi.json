@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Card Advisor local implemented API",
-    "version": "0.18.0",
-    "description": "카드 추천 로컬 API. KB/하나 승인 조회, 지원 method의 CODEF 추가 인증 재개, 실제 카드 전월액·신규 등록 유예 자격 및 취소 한도 복원 보류 구현. 기관별 미지원 인증·외화/정산 조건과 공개 운영은 별도 검증."
+    "version": "0.19.0",
+    "description": "카드 추천 로컬 API. KB/하나 승인 조회, 지원 method의 CODEF 추가 인증 재개, 실제 카드 전월액·신규 등록 유예 자격 및 취소 한도 복원 보류 구현. 기관별 미지원 인증·외화/정산 조건과 공개 운영은 별도 검증. 보유 카드 명시 조회·확인 등록, 미지원 상품 UNKNOWN 보호 추가."
   },
   "servers": [
     {
@@ -3481,6 +3481,156 @@
           }
         }
       }
+    },
+    "/finance/connections/{connection}/held-cards": {
+      "get": {
+        "summary": "저장된 보유 카드 조회 (공급자 호출 없음)",
+        "responses": {
+          "200": {
+            "description": "connectionVersion/state/cards/products"
+          },
+          "404": {
+            "description": "본인 연결 없음"
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/finance/connections/{connection}/held-cards/refresh": {
+      "post": {
+        "summary": "동의한 본인 ACTIVE 연결의 보유 카드 조회",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedConnectionVersion",
+                  "confirmed"
+                ],
+                "properties": {
+                  "expectedConnectionVersion": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "confirmed": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "검증·마스킹된 조회 목록. 자동 카드 등록 없음"
+          },
+          "409": {
+            "description": "연결 변경"
+          },
+          "422": {
+            "description": "동의/응답 규격 오류"
+          },
+          "503": {
+            "description": "금융 비활성 또는 공급자 실패"
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/finance/connections/{connection}/held-cards/{id}/register": {
+      "post": {
+        "summary": "선택한 보유 카드를 본인 카드로 등록. 상품은 명시 선택만 허용",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion",
+                  "expectedConnectionVersion",
+                  "confirmed"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "expectedConnectionVersion": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "confirmed": {
+                    "const": true
+                  },
+                  "productId": {
+                    "type": "string"
+                  },
+                  "expectedRuleVersion": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "서버 저장 목록; 재시도 시 중복 등록 없음"
+          },
+          "404": {
+            "description": "본인 조회 카드 없음"
+          },
+          "409": {
+            "description": "오래된 조회/상품 버전 또는 모호한 카드"
+          },
+          "422": {
+            "description": "확인/카드사/상품 불일치"
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -3522,7 +3672,10 @@
             "type": "string"
           },
           "rateBp": {
-            "type": "integer",
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 10000
           },
@@ -4665,7 +4818,10 @@
             "pattern": "^\\[가상\\]"
           },
           "rateBp": {
-            "type": "integer",
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 10000
           },
