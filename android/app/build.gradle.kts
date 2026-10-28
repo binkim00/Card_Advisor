@@ -16,6 +16,10 @@ android {
   buildTypes.getByName("release").signingConfig=signingConfigs.getByName("privateRelease")
  }
  buildTypes.getByName("debug") {
+  providers.gradleProperty("advisor.apiUrl").orNull?.let { endpoint ->
+   require(endpoint.matches(Regex("https://[A-Za-z0-9.-]+(?::[0-9]+)?"))) { "Configured debug API must use HTTPS and contain only a host/port." }
+   buildConfigField("String","API_BASE_URL","\"$endpoint\"")
+  }
   val previewSuffix=providers.gradleProperty("advisor.previewSuffix").orNull
   if(previewSuffix!=null){require(previewSuffix==".designreview"){"Only the isolated design review suffix is supported"};applicationIdSuffix=previewSuffix}
  }

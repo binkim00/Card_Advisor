@@ -15,7 +15,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Runs the actual Activity against the real local API. No API or repository mocks. */
+/** Runs the actual Activity against the configured real API. No API or repository mocks. */
 @RunWith(AndroidJUnit4::class)
 class BlueDeviceFlowTest {
  @get:Rule val compose = createAndroidComposeRule<MainActivity>()
@@ -85,6 +85,7 @@ class BlueDeviceFlowTest {
   compose.onNodeWithTag("password").performScrollTo().performTextInput(password)
   click("가입")
   waitFor("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+  click("가상 데이터로 둘러보기  +")
   click("가상 데이터 준비")
   waitFor("가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.")
   if(InstrumentationRegistry.getArguments().getString("stress")=="true")repeat(12){
@@ -134,7 +135,7 @@ class BlueDeviceFlowTest {
   click("[가상] B 카드 월별 수정");click("월별 값 저장");waitFor("월별 값을 저장하고 다시 조회했습니다.")
   click("가계부");stats(true)
   compose.onNodeWithText("[가상] B 카드 · 혜택 잔여 한도 9,700원").assertExists()
-  click("나가기");waitFor("로그아웃했습니다.")
+  click("설정");click("나가기");waitFor("로그아웃했습니다.")
   compose.onNodeWithTag("password").performScrollTo().performTextInput(password)
   click("로그인");waitFor("로그인했습니다.")
   click("가계부");click("새로고침");waitFor("내역을 조회했습니다.")

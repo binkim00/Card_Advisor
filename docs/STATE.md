@@ -1,3 +1,22 @@
+# Tailscale 비공개 서버 연결·Android APK 검증 완료 — 2026-10-28
+
+## 목표·확정 결정
+디자인 개선 후 서버 연결까지 마친 동일 APK로 검증한다. 사용자 선택 Tailscale, 폰은 현재 연결 불가. 기존 여기일지도 서비스/DB·개인 DB 유지, 카드 메모리/CPU 제한 유지, 카드 인터넷 공개/실금융/AI/메일 호출 금지. main e548a20 기반.
+
+## 완료·증거
+- Tailscale Serve 전용 HTTPS19443 추가. 카드 Funnel 비활성, 기존443 Serve/Funnel 설정 동일. 카드 API loopback19443·DB 비공개/메모리768MiB+384MiB·CPU0.50+0.25 유지. 전체16컨테이너 ID/이미지/기동/실행/재시작/한도 동일, 기존API200. 기존 DB SQL 없음. 공급자 설정 공백 재확인.
+- 실제 서버 주소를 넣은 독립 패키지 dev.cardadvisor.android.designreview APK 빌드 성공. JVM15/lint오류0·경고16. 에뮬레이터→Tailscale HTTPS→서버 API→전용PG 전체 UI1흐름 통과, 합성 구매50,000/부분취소20,000/순지출30,000·혜택300/잔여9,700·실적300,000·후속예산40,000 DB 일치. MAIN 완료 재개 통과.
+- 최초 UI 문구 불일치는 검사 APK만 정정 후 통과. 성공/실패 검사 합성 계정 삭제 후 새DB 주요4표0. 원래 앱/개인 DB/폰 조작 없음. 에뮬레이터 이름 해석만 임시 loopback DNS로 보완했고 앱 TLS 검증은 정상 유지.
+- 상세 docs/verification/2026-10-28-tailnet-android.md, .run/private-{ui-result,server-database}.json. 설치 APK outputs/private-android/card-advisor-private.apk 및 build.json 보관. 로컬 기능 커밋, 원격 push/CI 없음.
+
+## 남은 작업
+실제 폰의 Tailscale VPN/MagicDNS/기기 승인·권한·화면 검증은 미실행. 장시간 공동 부하/백업 복구/호스트 재부팅/실금융/공개/스토어 배포는 별도. 서버 전체가 비공개라는 뜻이 아니라 카드 전용 연결이 비공개다.
+
+## 다음 행동 하나
+폰 연결이 가능해지면 같은 APK를 설치해 폰 자체 Tailscale 연결로 실제 기기 전체 흐름을 확인한다. 추가 빌드나 공개 전환을 먼저 수행하지 않는다.
+
+---
+
 # Android 주요 화면·버튼 UX 개선 완료 — 2026-10-28
 
 ## 목표·결정
