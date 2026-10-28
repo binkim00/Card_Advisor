@@ -1,6 +1,6 @@
-# 여기일지도 서버 동거 구성 검토안 — 2026-10-28
+# 여기일지도 서버 비공개 동거 구성 — 2026-10-28
 
-로컬 합성 이미지 빌드·제한 기동·HTTPS/API→DB·짧은 부하 검증을 완료했다. [검증 범위와 결과](../../docs/verification/2026-10-28-cohost-local.md)를 참고한다. 서버 파일 전송·배포·기존 서비스 설정 변경은 하지 않았다. 외부 공개용 구성이 아닌 비공개 검증 시작점이다.
+로컬 합성 이미지 빌드·제한 기동·HTTPS/API→DB·짧은 부하 검증을 완료했다. [검증 범위와 결과](../../docs/verification/2026-10-28-cohost-local.md)를 참고한다. 이후 사용자 승인으로 서버 비공개 배포도 완료했다. [실제 서버 배포 증거](../../docs/verification/2026-10-28-cohost-private-server.md)를 참고한다. 기존 서비스 설정은 유지했으며 외부 공개/실금융 연동은 하지 않았다.
 
 ## 구성과 한도
 
@@ -18,7 +18,7 @@ Compose 프로젝트명은 `card-advisor-cohost`이다. 기본 생성 이름은 
 
 ## 외부 접속과 비밀 설정
 
-API는 기존 prod HTTPS 설정을 사용한다. 80/443 포트, 기존 리버스 프록시, 도메인/DNS, 보안 그룹은 건드리지 않는다. 첫 접속은 승인된 배포 이후 SSH 터널로만 검증한다. 공개 URL과 Android release 연결은 별도 결정이며 현재 구성으로 휴대폰의 일반 인터넷 접속이 가능한 것은 아니다.
+API는 기존 prod HTTPS 설정을 사용한다. 80/443 포트, 기존 리버스 프록시, 도메인/DNS, 보안 그룹은 건드리지 않는다. 서버 내부 HTTPS 기능 검증을 완료했다. 외부에서 관리자 접속이 필요하면 별도로 승인한 SSH 터널을 사용한다. 공개 URL과 Android release 연결은 별도 결정이며 현재 구성으로 휴대폰의 일반 인터넷 접속이 가능한 것은 아니다.
 
 DB 비밀번호와 TLS PKCS12/비밀번호는 `CARD_SECRETS_DIR`의 파일을 Compose secrets로 읽는다. API는 Spring Boot 3.5의 `configtree:/run/secrets/`로 비밀번호 파일을 읽고, DB는 `POSTGRES_PASSWORD_FILE`을 사용한다. 이 기능이 파일을 자동 암호화하지는 않는다. 이미지/저장소/예제에 실제 값은 넣지 않는다.
 
@@ -36,16 +36,16 @@ CODEF·암호화 키·OpenAI·SMTP 설정 경로는 빈 값으로 고정했다. 
 docker compose --env-file deploy/cohost/preview.env.example -f deploy/cohost/compose.yaml config --quiet
 ```
 
-실제 `up` 명령은 이 단계에서 실행하지 않는다. 승인 후 제안할 서버 작업 위치는 `/opt/card-advisor`이며, 아직 만들지 않았다. 기존 `/home/ubuntu/life-infra-map` 경로를 사용하지 않는다. 기존 로그인/금융/거래는 PC에 남고, 이 구성은 빈 카드 전용 DB를 전제로 한다. Flyway는 그 DB에만 실행된다.
+사용자 승인에 따라 새 카드 프로젝트의 `up`을 실행했다. 서버 작업 위치는 `/opt/card-advisor`이며 기존 여기일지도 프로젝트와 분리되어 있다. 기존 `/home/ubuntu/life-infra-map` 경로를 사용하지 않는다. 기존 로그인/금융/거래는 PC에 남고, 이 구성은 빈 카드 전용 DB를 전제로 한다. Flyway는 그 DB에만 실행된다.
 
 신규 컨테이너의 재시작은 실패 시 최대 3회다. 호스트 재부팅 후 자동 복구를 보장하는 운영 정책은 이 비공개 검토안에 포함하지 않았다. 로컬 합성 이미지 빌드/제한된 메모리 기동/HTTPS/DB 마이그레이션/짧은 부하 검증은 완료했다. 장시간·재시작/백업 복구·실제 호스트 검증은 남아 있다. Linux용 암호화 백업과 별도 호스트 보관·복원 절차도 운영 전 준비해야 한다. 기존 Windows DPAPI 백업을 서버에서 그대로 복구할 수 있다고 가정하지 않는다.
 
-## 실제 배포 승인 전 확인할 내용
+## 다음 단계 전 확인할 내용
 
 1. 이 구성의 메모리·CPU 한도와 SSH 터널 전용 검증 경로 검토.
 2. 로컬 합성 resource limit·TLS·API→DB 검증은 완료했다. 재현은 fresh JAR package 후 `python scripts/verify-cohost-local.py`를 사용한다. 기존 개인 DB와 기존 운영 서버에서는 실행하지 않는다.
-3. 새 TLS/DB 비밀 파일 준비, 저장/백업 정책과 이미지 digest 확정. 새 설정은 나중에 승인된 범위에서만 준비한다.
-4. 배포 직전 기존 컨테이너 상태/디스크/가용 메모리와 19443 포트 미사용을 읽기 전용으로 재확인.
-5. 실제 적용은 사용자 승인 후 카드 프로젝트의 두 컨테이너만 대상으로 한다. 중단도 그 두 컨테이너만 대상으로 하며 `down -v`, 광역 stop/restart, 네트워크/볼륨/이미지 prune은 하지 않는다. 여기일지도 상태와 응답을 전후 대조하고 악화되면 새 카드 컨테이너만 중단한다.
+3. 내부용 TLS/DB 비밀과 배포 이미지 식별자는 준비·검증했다. 운영 백업/복구 정책과 공개용 TLS 등은 별도 승인 범위에서 준비한다.
+4. 후속 변경 전에도 기존 컨테이너 상태/디스크/가용 메모리와 카드 전용 리소스를 읽기 전용으로 재확인한다.
+5. 이번 비공개 적용은 완료했다. 공개/금융/재배포 등 후속 적용도 사용자 승인 범위에서 카드 프로젝트만 대상으로 한다. 중단도 그 두 컨테이너만 대상으로 하며 `down -v`, 광역 stop/restart, 네트워크/볼륨/이미지 prune은 하지 않는다. 여기일지도 상태와 응답을 전후 대조하고 악화되면 새 카드 컨테이너만 중단한다.
 
 근거: [Compose 자원/서비스 설정](https://docs.docker.com/reference/compose-file/services/), [Compose secrets](https://docs.docker.com/compose/how-tos/use-secrets/), [Spring Boot 3.5 configtree](https://docs.spring.io/spring-boot/3.5/reference/features/external-config.html#features.external-config.files.configtree).

@@ -1,3 +1,23 @@
+# 여기일지도 서버 비공개 카드 컨테이너 배포 완료 — 2026-10-28
+
+## 목표·확정 결정
+사용자가 명시 승인한 카드 API/전용DB 서버 배포. 기존 여기일지도 서비스/DB 유지, 메모리·CPU 제한 유지, 외부 공개/실금융/AI/메일 설정 공백. source6f07130(main), 실제 앱 이미지 검증 sourcea5d7bc3 재사용(이후 앱 코드 변경 없음).
+
+## 완료·검증 근거
+- /opt/card-advisor·card-advisor-cohost 프로젝트에 API/전용PG healthy2개 실행 중. API768MiB/0.50CPU, PG384MiB/0.25CPU, swap0. 서버 127.0.0.1:19443 HTTPS만 LISTEN, DB host port없음. 호스트 두 사설IP 포트접속 거절. 기존 프록시/DNS/보안그룹 변경 없음.
+- 서버 합성 HTTPS API→PG 계약16 통과, 신규DB V29·검사 후 사용자/카드/원장/금융거래0. 기존 DB SQL 실행 없음. 새 비밀번호/TLS는 서버에서만 생성, secretroot0700/UID10001파일0400 검증.
+- cgroup peak API202.95MiB/DB76.49MiB, OOM/kill0·재시작0. 15:15:24KST 직접 검증. 배포 후 가용RAM1.97GiB/디스크27.20GiB.
+- 기존14컨테이너(13running+종료init1) 메타데이터/설정해시/시작시각/마운트 전후 동일, 기존API전후/최종HTTP200. 기존 데이터 내용해시 증거는 아님. 최초 사전 검사만 init종료상태 때문에 안전 중단 후 조건 정정했고 기존 서비스는 조작하지 않았다.
+- docs/verification/2026-10-28-cohost-private-server.md와 일회성 실행 스크립트 기록. 서버 evidence/20261028-6f07130-private/deployment.json·로컬 .run/cohost-server-20261028-6f07130/deployment-receipt.json 보관. 원격 Git push 없음.
+
+## 남은 작업
+휴대폰 외부 접속/공개URL·실금융 연동 금지 유지. 장시간/실제공동부하·Linux 백업/복구·호스트재부팅자동복구·공개용TLS는 미완료. 이번 서버 기동/기능 검증을 로컬 부하검사나 공개 서비스 완성으로 확대하지 않는다.
+
+## 다음 행동 1개
+비공개 상태를 유지하고 사용자가 지정하는 다음 확인을 진행한다. 공개/금융/기존서비스 변경을 자동으로 수행하지 않는다.
+
+---
+
 # 동거 컨테이너 로컬 합성 검증 완료 — 2026-10-28
 
 ## 현재 목표·확정 결정
