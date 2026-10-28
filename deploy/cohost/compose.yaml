@@ -1,0 +1,99 @@
+name: card-advisor-cohost
+services:
+  api:
+    image: ${CARD_API_IMAGE:?Set a locally built release image tag or digest}
+    init: true
+    user: "10001:10001"
+    restart: "on-failure:3"
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 0.50
+    cpu_shares: 256
+    pids_limit: 128
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=32m,mode=1777,noexec,nosuid
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      PORT: "18443"
+      TLS_KEYSTORE: /run/secrets/tls.p12
+      DB_URL: jdbc:postgresql://db:5432/card_advisor
+      DB_USER: card_advisor
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: "1"
+      SERVER_TOMCAT_THREADS_MAX: "20"
+      SERVER_TOMCAT_THREADS_MIN_SPARE: "2"
+      SERVER_TOMCAT_ACCEPT_COUNT: "20"
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx384m -XX:MaxDirectMemorySize=64m -XX:+ExitOnOutOfMemoryError
+      CODEF_CONFIG_FILE: ""
+      CODEF_STORAGE_KEY_FILE: ""
+      OPENAI_CONFIG_FILE: ""
+      ACCOUNT_MAIL_CONFIG_FILE: ""
+    secrets:
+      - DB_PASSWORD
+      - TLS_KEYSTORE_PASSWORD
+      - source: TLS_KEYSTORE_FILE
+        target: tls.p12
+    ports:
+      - "127.0.0.1:19443:18443"
+    networks: [private_db, egress]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, 'curl --fail --silent --show-error --insecure --max-time 5 https://127.0.0.1:18443/v1/health >/dev/null']
+      interval: 30s
+      timeout: 6s
+      start_period: 90s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+  db:
+    image: postgres:17.6
+    restart: "on-failure:3"
+    mem_limit: 384m
+    memswap_limit: 384m
+    cpus: 0.25
+    cpu_shares: 256
+    pids_limit: 128
+    shm_size: 64m
+    security_opt: [no-new-privileges:true]
+    environment:
+      POSTGRES_DB: card_advisor
+      POSTGRES_USER: card_advisor
+      POSTGRES_PASSWORD_FILE: /run/secrets/DB_PASSWORD
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    secrets: [DB_PASSWORD]
+    command: [postgres, -c, shared_buffers=64MB, -c, work_mem=2MB, -c, maintenance_work_mem=32MB, -c, max_connections=15]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [private_db]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U card_advisor -d card_advisor]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+volumes:
+  pgdata: {}
+networks:
+  private_db:
+    internal: true
+  egress: {}
+secrets:
+  DB_PASSWORD:
+    file: ${CARD_SECRETS_DIR:?Set a dedicated card-app secrets directory}/DB_PASSWORD
+  TLS_KEYSTORE_PASSWORD:
+    file: ${CARD_SECRETS_DIR:?Set a dedicated card-app secrets directory}/TLS_KEYSTORE_PASSWORD
+  TLS_KEYSTORE_FILE:
+    file: ${CARD_SECRETS_DIR:?Set a dedicated card-app secrets directory}/tls.p12
