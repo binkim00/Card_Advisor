@@ -17,8 +17,8 @@ RULES = [
     ('jwt', re.compile(rb'\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{20,}\b')),
     ('credential-url', re.compile(rb'(?i)\b(?:postgres(?:ql)?|mysql|https?)://[^\s/:]+:[^\s/@]{8,}@')),
 ]
-PRIVATE_DIRS = {'.local', '.run', '.tools', 'outputs', 'secrets', 'backups', 'node_modules', '.gradle', 'target', 'build'}
-PRIVATE_SUFFIXES = {'.key', '.pem', '.p12', '.pfx', '.jks', '.keystore', '.dpapi', '.pgdump', '.dump', '.backup', '.db', '.sqlite', '.sqlite3', '.apk', '.aab', '.apks', '.log', '.hprof'}
+PRIVATE_DIRS = {'.local', '.run', '.tools', 'outputs', 'secrets', 'backups', 'node_modules', '.gradle', 'target', 'build', 'data', 'artifacts', 'captures', 'screenshots', 'tmp', '.venv', 'venv', '.aws', '.ssh', '.kube', '.cxx', '.externalNativeBuild', '.pytest_cache', '.mypy_cache', '.ruff_cache'}
+PRIVATE_SUFFIXES = {'.key', '.pem', '.p12', '.pfx', '.jks', '.keystore', '.dpapi', '.pgdump', '.dump', '.backup', '.db', '.sqlite', '.sqlite3', '.apk', '.aab', '.apks', '.log', '.hprof', '.crt', '.cer', '.der', '.jfr', '.heapdump', '.pgpass'}
 
 def git(repo, *args):
     r = subprocess.run(['git', '-C', str(repo), *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -32,13 +32,13 @@ def forbidden(name):
             or p.suffix.lower() in PRIVATE_SUFFIXES
             or (p.name.startswith('.env') and p.name != '.env.example')
             or p.name in {'local.properties', 'codef.properties', 'mail.properties', 'openai.properties'}
-            or p.name.endswith('.local.properties')
+            or p.name.endswith(('.env', '.local.properties', '.sql.gz', '.sql.zip', '.pgdump.gz'))
             or p.name.startswith(('application-local.', 'application-secrets.'))
             or any(ord(c) < 32 for c in name))
 
 def local_values(repo):
     # Explicit opt-in. Read only text configuration, never keys/DB dumps/screens/logs.
-    paths = [repo / '.env'] + sorted((repo / '.local').glob('*.properties'))
+    paths = [repo / '.env'] + sorted((repo / '.local').glob('*.properties')) + sorted((repo / '.local').glob('*.env'))
     values = set()
     for p in paths:
         if not p.is_file():

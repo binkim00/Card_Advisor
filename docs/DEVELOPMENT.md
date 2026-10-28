@@ -1,6 +1,6 @@
 # 로컬 Git 작업 규칙
 
-- 기본 브랜치는 `main`. 원격 저장소는 아직 연결하지 않는다.
+- 기본 브랜치는 `main`. 원격은 사용자 지정 `https://github.com/binkim00/Card_Advisor.git`를 사용한다. 사용자가 최초 push를 승인했으며, 올리기 전 전체 이력·추적 파일·로컬 비밀값 대조 검사를 통과해야 한다. 이후 push는 해당 작업의 사용자 승인 범위를 따른다.
 - 현재 구현 전체는 최초 기준 커밋으로 남긴다. 이전 변경 이력을 복원한 커밋은 아니다.
 - 이후 기능·수정 단위로 관련 검사 후 커밋한다. 예: `feat: ...`, `fix: ...`, `docs: ...`, `chore: ...`.
 - 커밋 전 `git diff`, 필요한 파일만 `git add -- 경로`, `git diff --cached --stat`, `git diff --cached --check`를 확인한다. 다른 작업의 변경은 섞지 않는다.
@@ -35,3 +35,19 @@ python scripts/check-staged-secrets.py --self-test
 ```
 
 `--audit-local`은 비공개 설정의 비밀 필드와 커밋 후보의 정확한 값 일치를 로컬 메모리에서만 검사한다. 비밀 원문은 출력하지 않는다. 테스트는 별도 임시 Git 저장소에서 합성 문자열만 사용한다. 이 검사는 앱·백엔드 테스트나 배포 검증을 대신하지 않는다.
+
+
+## main 최초 push 및 이후 공개 전 검사
+
+`gitignore`는 이미 커밋한 파일/과거 이력을 숨기지 않는다. 원격에 보낼 main에서 아래 검사와 diff 검토를 마친다. 전체 이력 감사는 HEAD 도달 가능 blob의 비밀 패턴·로컬 비공개 설정값·금지 경로·허용 외 바이너리/대용량 파일을 검사한다. `.run/history-audit.json`에 값 없는 결과를 보관한다. 다른 브랜치/태그는 자동으로 보내지 않는다.
+
+```powershell
+python scripts/check-staged-secrets.py --self-test
+python scripts/audit-git-history.py --self-test
+python scripts/check-staged-secrets.py --audit-local
+python scripts/audit-git-history.py
+git ls-files -ci --exclude-standard
+git diff --cached --check
+```
+
+실제 환경/금융 기록은 비공개 폴더에 둔다. `.env.example`·DB 마이그레이션·공식 앱 리소스는 유지한다. 공개 원격에 push할 때는 승인된 브랜치만 일반 push하며 force/mirror/all/tags를 사용하지 않는다. 검사 실패 시 원문 값을 출력하거나 문제를 숨긴 채 push하지 않는다.

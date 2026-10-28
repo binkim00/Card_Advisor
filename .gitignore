@@ -6,10 +6,23 @@
 /backups/
 /data/
 /secrets/
+/artifacts/
+/captures/
+/screenshots/
+/tmp/
+**/.venv/
+**/venv/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.aws/
+**/.ssh/
+**/.kube/
 
 # Environment and private provider configuration; retain safe examples
 .env
 .env.*
+*.env
 !.env.example
 *.local.properties
 **/local.properties
@@ -34,6 +47,17 @@ application-secrets.*
 *.sqlite3
 *.sqlite-*
 *.hprof
+*.jfr
+*.heapdump
+*.crt
+*.cer
+*.der
+*.pgpass
+*.sql.gz
+*.sql.zip
+*.pgdump.gz
+**/.cxx/
+**/.externalNativeBuild/
 
 # Build tools / generated output
 **/target/
