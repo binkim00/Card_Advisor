@@ -37,7 +37,7 @@ class FinanceFlowTest {
   try{
    scenario=ActivityScenario.launch(MainActivity::class.java).onActivity{it.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)}
    tag("email").performTextReplacement(email);tag("password").performTextReplacement(pw)
-   click("가입");waitText("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+   click("가입");waitText("가입했습니다. 내 카드를 등록해 시작해 보세요.")
    click("금융 연결 관리");waitText("연결 정보를 불러오지 못했습니다. 최신 연결 조회로 다시 확인해 주세요.")
    tag("financeNew").assertIsNotEnabled();clickTag("financeRefresh");waitText("저장된 금융 연결이 없습니다.")
    tag("financeEnvironment").assertTextEquals("합성 응답 검증용 · 실제 금융정보가 아닙니다.")

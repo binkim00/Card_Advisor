@@ -42,7 +42,7 @@ class ClassificationFlowTest {
   val email="ui-$runId@example.test";val password="UiTest-"+UUID.randomUUID()
   val month=YearMonth.now(ZoneId.of("Asia/Seoul")).toString()
   val dir=File(compose.activity.getExternalFilesDir(null),"e2e/$runId").apply{mkdirs()}
-  fill("email",email);fill("password",password);click("가입");waitFor("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+  fill("email",email);fill("password",password);click("가입");waitFor("가입했습니다. 내 카드를 등록해 시작해 보세요.")
   click("가상 데이터 준비");waitFor("가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.")
   click("가계부");openLedgerDetails();click("[가상] B 카드 사용");click("구매 기록 추가");waitFor("수동 구매 기록을 추가했습니다.");openLedgerDetails()
   click("부분 취소 반영");compose.onNodeWithTag("cancelAmount").performTextInput("20000");compose.onNodeWithText("취소 금액 반영").performClick();waitFor("부분 취소 20,000원을 반영했습니다.")

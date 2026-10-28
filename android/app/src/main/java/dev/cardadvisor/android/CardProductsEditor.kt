@@ -7,7 +7,7 @@ import androidx.compose.ui.platform.testTag
 import kotlinx.coroutines.*
 import org.json.*
 
-@Composable internal fun CardProductsEditor(api:ApiClient,onBusyChanged:(Boolean)->Unit,onChanged:suspend()->Unit,onEditMonth:()->Unit,onOpenFinance:(String)->Unit={}){
+@Composable internal fun CardProductsEditor(api:ApiClient,onBusyChanged:(Boolean)->Unit,onChanged:suspend()->Unit,onEditMonth:()->Unit,onOpenFinance:(String)->Unit={},onImport:()->Unit={}){
  val scope=rememberCoroutineScope { Dispatchers.Main.immediate }
  var products by remember{mutableStateOf(JSONArray())};var cards by remember{mutableStateOf(JSONArray())}
  var linkedCounts by remember{mutableStateOf<Map<String,Int>?>(null)}
@@ -19,7 +19,12 @@ import org.json.*
   notice="상품 등록과 금융 카드 연결은 별도입니다. 연결 상태를 확인하고 저장해 주세요."
  }
  LaunchedEffect(Unit){action{load()}}
- Text("내 실제 카드",style=MaterialTheme.typography.titleLarge)
+ Text("내 카드",style=MaterialTheme.typography.titleLarge)
+ Button(enabled=!busy,onClick=onImport,modifier=Modifier.fillMaxWidth().testTag("importMyCards")){Text("카드사 연결하기")}
+ Text("카드사를 연결하면 이용내역에 나타난 카드를 확인할 수 있어요. 보유 카드 전체를 자동 등록하는 기능은 아직 준비 중입니다.")
+ RegisteredCards(cards,linkedCounts)
+ ExpandablePanel("카드 직접 추가하기"){
+ Text("아래는 혜택 규칙을 확인한 상품 목록입니다. 보유 카드 목록이 아니며, 다른 카드의 혜택을 임의로 적용하지 않습니다.")
  Text("국내 원화·네이버플러스 스토어/무신사·일반 상품·일시불·단일 승인 범위입니다. 조건과 입력에 따른 예상이며 카드사 확정 혜택이 아닙니다. 행사·해외·기타 가맹점은 포함하지 않습니다.")
  Text(notice,Modifier.testTag("productsNotice"));if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
  OutlinedButton(enabled=!busy,onClick={action{load()}},modifier=Modifier.testTag("productsRefresh")){Text("상품·내 카드 새로고침")}
@@ -41,6 +46,7 @@ import org.json.*
    }
   }
  }
+ }
  OutlinedButton(enabled=!busy,onClick=onEditMonth){Text("현재 자격·월별 미기록 실적 입력")}
 }
 
@@ -58,4 +64,15 @@ import org.json.*
  Text(if(noThreshold)"국내 일반 적립 월 한도 없음" else if(c.isNull("remainingCapWon"))"예상 잔여 한도: 미확인" else "예상 잔여 한도: %,d원".format(c.getLong("remainingCapWon")))
  Text("원구매 기준 참고값이며 실제 적립·환수된 월과 다를 수 있습니다. 카드사 명세가 우선합니다.",style=MaterialTheme.typography.bodySmall)
  Text("실적 취소 기준: "+c.getString("cancellationPolicy"),style=MaterialTheme.typography.bodySmall)
+}
+
+@Composable internal fun RegisteredCards(cards:JSONArray,linkedCounts:Map<String,Int>?){
+ Text("등록한 카드",style=MaterialTheme.typography.titleMedium)
+ val owned=(0 until cards.length()).map{cards.getJSONObject(it)}.filter{it.optString("source").startsWith("OFFICIAL_")}
+ if(owned.isEmpty())DesignPanel{Text("아직 등록한 카드가 없어요");Text("카드사를 연결하거나 아래에서 실제 보유한 상품을 직접 추가해 주세요.")}
+ owned.forEach{card->DesignPanel{
+  Text(card.getString("name"),style=MaterialTheme.typography.titleMedium)
+  val count=linkedCounts?.get(card.getString("id"))?:if(linkedCounts!=null)0 else null
+  Text(when{count==null->"연결 상태 확인 필요";count==0->"직접 등록 · 카드사 연결 전";else->"카드사 연결 ${count}개"})
+ }}
 }

@@ -38,7 +38,7 @@ class FixedCostColdStartTest {
    step("launch pid=${Process.myPid()} fault=$mode")
    activity=ActivityScenario.launch(MainActivity::class.java)
    fill("email","cold-$id@example.test");fill("password","UiTest-"+UUID.randomUUID());click("가입")
-   waitFor("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+   waitFor("가입했습니다. 내 카드를 등록해 시작해 보세요.")
    authenticated=true
    click("가상 데이터 준비");waitFor("가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.")
    click("반복 고정비 관리")

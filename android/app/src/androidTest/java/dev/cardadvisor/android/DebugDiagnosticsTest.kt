@@ -69,7 +69,7 @@ class DebugDiagnosticsTest {
    scenario=ActivityScenario.launch(MainActivity::class.java)
    compose.onNodeWithTag("email").performTextReplacement("diag-$id@example.test")
    compose.onNodeWithTag("password").performTextReplacement("UiTest-"+UUID.randomUUID())
-   click("가입");waitFor("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+   click("가입");waitFor("가입했습니다. 내 카드를 등록해 시작해 보세요.")
    click("가상 데이터 준비");waitFor("가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.")
    click("반복 고정비 관리");waitFor("요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.")
    val pinned=File(directory(),"first-exception.json").readBytes()

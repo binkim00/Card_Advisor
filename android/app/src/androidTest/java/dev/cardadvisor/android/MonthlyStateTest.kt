@@ -27,7 +27,7 @@ class MonthlyStateTest {
   val email="ui-$runId@example.test";val password="UiTest-"+UUID.randomUUID()
   val dir=File(compose.activity.getExternalFilesDir(null),"e2e/$runId").apply{mkdirs()}
   val today=LocalDate.now(ZoneId.of("Asia/Seoul"));val month=YearMonth.from(today).toString()
-  fill("email",email);fill("password",password);click("가입");waitFor("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+  fill("email",email);fill("password",password);click("가입");waitFor("가입했습니다. 내 카드를 등록해 시작해 보세요.")
   click("가상 데이터 준비");waitFor("가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.")
   click("월별 실적·자격 수정");waitFor("저장된 월별 값을 불러왔습니다.")
   click("[가상] B 카드 월별 수정")

@@ -73,7 +73,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
  var cancelAmount by remember{mutableStateOf("")}
  var cardRefundAmount by remember{mutableStateOf("")}
  var cardStates by remember{mutableStateOf(JSONArray())}
- var actualMode by remember{mutableStateOf(false)}
+ var actualMode by remember{mutableStateOf(true)}
  var paymentMethod by remember{mutableStateOf("NAVER_PAY_CARD")}
  var checkoutCategory by remember{mutableStateOf("SHOPPING")};var installmentMonths by remember{mutableStateOf("1")};var splitApproval by remember{mutableStateOf("NO")}
  var splitCategories by remember{mutableStateOf(false)};val checkoutAllocations=remember{mutableStateMapOf<String,String>()}
@@ -117,7 +117,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
    try{
     val response=JSONObject(api.request(if(register)"/v1/auth/register" else "/v1/auth/login","POST",JSONObject().put("email",email).put("password",password)))
     api.setSession(response);loggedIn=true;password=""
-    message=if(register)"가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다." else "로그인했습니다."
+    message=if(register)"가입했습니다. 내 카드를 등록해 시작해 보세요." else "로그인했습니다."
    }catch(e:kotlinx.coroutines.CancellationException){throw e}
    catch(e:Exception){authError=when{e is ApiException&&e.status==409->"이미 등록된 이메일일 수 있습니다. 로그인으로 확인해 주세요.";e is ApiException&&e.status==401->"이메일 또는 비밀번호를 확인해 주세요.";else->e.message?:"인증을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."};throw e}
   }
@@ -167,20 +167,17 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
      if(detectedCheckout!=null)OutlinedButton(enabled=!busy,onClick={tab=11}){Text("감지한 주문서 금액 확인")}
      HomeBudget(budgetSummary,busy,onBudget={budgetEditingMonth=null;tab=4},onRefresh={runTask{invalidate();refreshLedger()}})
      CompareCallout(!busy){tab=1}
-     DashboardCards(cardStates,onEdit={tab=3},enabled=!busy)
+     DashboardCards(cardStates,onEdit={tab=3},enabled=!busy,onAdd={tab=9})
      SettingsGroup("더 편하게 관리하기"){
-     ServiceMenu("내 실제 카드 등록","보유 상품을 선택하고 금융 카드와 연결해요",!busy){tab=9}
+     ServiceMenu("내 카드 관리","내 카드 확인 · 카드사 연결",!busy){tab=9}
      ServiceMenu("쇼핑 주문서 감지","결제 정보를 확인하고 카드 비교로 이어가요",!busy){tab=11}
      ServiceMenu("소비 분석·예산 제안","지출을 돌아보고 다음 소비를 준비해요",!busy){tab=10}
      }
-     if(cardStates.length()==0)ExpandablePanel("가상 데이터로 둘러보기"){
-      Text("실제 카드와 구분된 테스트 데이터로 기능을 확인합니다.")
-      Button(enabled=!busy,onClick={runTask{api.request("/v1/demo/setup","POST");refreshLedger();invalidate();message="가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다."}}){Text("가상 데이터 준비")}
-     }
+
     }
     11->DetectionEditor(api,onBusyChanged={busy=it},onConfirmed={o,p,m,shop,method,source->order=o;points=p;money=m;merchant=shop;paymentMethod=method;actualMode=true;ordinaryGoods=true;checkoutCategory="SHOPPING";installmentMonths="1";splitApproval="NO";splitCategories=false;checkoutAllocations.clear();factsConfirmed=true;confirmedDetectionGeneration=source;selectedCardId=null;invalidate();tab=1;compareCards()},onManual={confirmedDetectionGeneration=null;actualMode=true;factsConfirmed=false;invalidate();tab=1})
     10->InsightsEditor(api,onBusyChanged={busy=it},onChanged={invalidate();refreshLedger()})
-    9->CardProductsEditor(api,onBusyChanged={busy=it},onChanged={actualMode=true;selectedCardId=null;invalidate();refreshPerformance()},onEditMonth={tab=3},onOpenFinance={mappingOrganization=it;tab=6})
+    9->CardProductsEditor(api,onBusyChanged={busy=it},onChanged={actualMode=true;selectedCardId=null;invalidate();refreshPerformance()},onEditMonth={tab=3},onOpenFinance={mappingOrganization=it;tab=6},onImport={mappingOrganization=null;tab=6})
     8->AccountSettingsEditor(api,onBusyChanged={busy=it},onInvalidated={invalidate()},onDeleted={loggedIn=false;invalidate();ledger=JSONArray();budgetSummary=null;cardStates=JSONArray();tab=7;message="계정을 삭제했습니다."})
     6->FinanceEditor(api,onBusyChanged={busy=it},onInvalidated={invalidate();budgetSummary=null;ledger=JSONArray()},onChanged={refreshLedger()},initialMappingOrganization=mappingOrganization,onMappingOpened={mappingOrganization=null})
     5->FixedCostEditor(api,onBusyChanged={busy=it},onInvalidated={invalidate();budgetSummary=null},onChanged={refreshLedger()},onOpenBudget={budgetEditingMonth=it;tab=4})
@@ -188,7 +185,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
     3->MonthlyStateEditor(api,onBusyChanged={busy=it},onChanged={invalidate();refreshPerformance()})
     0->{
      SettingsGroup("카드와 금융"){
-     ServiceMenu("내 실제 카드 등록","보유 카드 상품 관리",!busy){tab=9}
+     ServiceMenu("내 카드 관리","등록한 카드 · 직접 추가",!busy){tab=9}
      ServiceMenu("금융 연결 관리","카드사 연결 · 이용내역 가져오기",!busy){tab=6}
      ServiceMenu("월별 실적·자격 수정","이번 혜택 자격과 다음 달 실적",!busy){tab=3}
      }
@@ -203,7 +200,7 @@ private fun amount(o:JSONObject,key:String)=if(o.isNull(key))"미확인" else wo
      }
      ExpandablePanel("가상 데이터로 기능 확인"){
       Text("실제 카드와 구분된 A·B 카드로 기능을 확인합니다.")
-      Button(enabled=!busy,onClick={runTask{api.request("/v1/demo/setup","POST");refreshPerformance();invalidate();message="가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다."}}){Text("가상 데이터 준비")}
+      Button(enabled=!busy,onClick={runTask{api.request("/v1/demo/setup","POST");actualMode=false;refreshPerformance();invalidate();message="가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다."}}){Text("가상 데이터 준비")}
      }
     }
     1->{

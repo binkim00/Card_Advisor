@@ -40,7 +40,7 @@ class LedgerDeviceFlowTest {
   try{
    LedgerVerificationActivity.client=api;scenario=ActivityScenario.launch(LedgerVerificationActivity::class.java)
    ui.waitUntil(15000){ui.onAllNodesWithTag("email").fetchSemanticsNodes(atLeastOneRootRequired=false).isNotEmpty()}
-   tag("email").performTextReplacement("device-ledger-$run@example.test");tag("password").performTextReplacement("Synthetic-$run");click("가입");waitText("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+   tag("email").performTextReplacement("device-ledger-$run@example.test");tag("password").performTextReplacement("Synthetic-$run");click("가입");waitText("가입했습니다. 내 카드를 등록해 시작해 보세요.")
    click("설정");click("동의·계정 관리");tag("emailVerificationOpen").performScrollTo().performClick();waitText("이메일 발송 설정이 아직 준비되지 않았습니다.");tag("recoveryRequest").assertIsNotEnabled();tag("recoveryBack").performScrollTo().performClick();click("홈");step("email_verification_unconfigured")
    click("가상 데이터로 둘러보기  +");click("가상 데이터 준비");waitText("가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.")
    step("manual_purchase");click("가계부");click("+ 수동 구매 기록");click("[가상] B 카드 사용");click("구매 기록 추가");waitText("수동 구매 기록을 추가했습니다.")

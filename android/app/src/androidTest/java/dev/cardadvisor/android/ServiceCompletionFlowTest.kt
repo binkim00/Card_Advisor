@@ -22,7 +22,7 @@ class ServiceCompletionFlowTest {
  private fun input(tag:String,value:String){val node=ui.onNodeWithTag(tag);if(runCatching{node.assertIsDisplayed()}.isFailure)node.performScrollTo();node.performTextReplacement(value)}
  private fun detail(){val m=SemanticsMatcher("ledger row"){it.config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.TestTag){""}.startsWith("transaction_")} and isEnabled();ui.waitUntil(20000){ui.onAllNodes(m).fetchSemanticsNodes().isNotEmpty()};ui.onAllNodes(m).onFirst().performScrollTo().performClick()}
  @After fun record(){val dir=File(ui.activity.getExternalFilesDir(null),"e2e/$run").apply{mkdirs()};File(dir,"request-trace.jsonl").writeText(Diagnostics.requestTraceSnapshot())}
- private fun authenticate(signup:Boolean){ui.runOnUiThread{ui.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)};input("email",email);input("password",password);click(if(signup)"가입" else "로그인");wait(if(signup)"가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다." else "로그인했습니다.")}
+ private fun authenticate(signup:Boolean){ui.runOnUiThread{ui.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)};input("email",email);input("password",password);click(if(signup)"가입" else "로그인");wait(if(signup)"가입했습니다. 내 카드를 등록해 시작해 보세요." else "로그인했습니다.")}
  @Test fun actualCardsConsentPurchaseRefundPersistence(){
   authenticate(true)
   click("내 실제 카드 등록");wait("검수 범위와 약관 버전을 확인한 뒤 보유 카드를 추가해 주세요.")

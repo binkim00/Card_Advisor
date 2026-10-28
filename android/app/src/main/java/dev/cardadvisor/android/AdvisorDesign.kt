@@ -188,14 +188,15 @@ private fun designWon(value: Long) = "%,d원".format(java.util.Locale.KOREA, val
     }
 }
 
-@Composable internal fun DashboardCards(cards: JSONArray, onEdit: () -> Unit, enabled: Boolean) {
+@Composable internal fun DashboardCards(cards: JSONArray, onEdit: () -> Unit, enabled: Boolean, onAdd: () -> Unit = onEdit) {
+    val owned=JSONArray().apply{for(i in 0 until cards.length()){val card=cards.getJSONObject(i);if(!card.optString("name").startsWith("[가상]")&&!card.optString("benefitRuleVersion").startsWith("SYNTHETIC"))put(card)}}
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text("내 카드", style = MaterialTheme.typography.titleLarge)
         TextButton(enabled=enabled,onClick=onEdit){Text("실적 관리")}
     }
-    if (cards.length()==0) DesignPanel { Text("첫 카드를 등록해 보세요",style=MaterialTheme.typography.titleMedium); Text("보유한 카드와 예산을 기준으로 결제 전 선택을 도와드려요.",color=MaterialTheme.colorScheme.onSurfaceVariant) }
-    for (i in 0 until cards.length()) {
-        val c=cards.getJSONObject(i)
+    if (owned.length()==0) DesignPanel { Text("첫 카드를 등록해 보세요",style=MaterialTheme.typography.titleMedium); Text("보유한 카드와 예산을 기준으로 결제 전 선택을 도와드려요.",color=MaterialTheme.colorScheme.onSurfaceVariant); Button(enabled=enabled,onClick=onAdd,modifier=Modifier.fillMaxWidth().testTag("dashboardAddCard")){Text("내 카드 추가하기")} }
+    for (i in 0 until owned.length()) {
+        val c=owned.getJSONObject(i)
         DesignPanel {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                 ProductThumbnail(c.getString("name"))

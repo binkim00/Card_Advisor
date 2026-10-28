@@ -56,7 +56,7 @@ class BlueDeviceFlowTest {
     count("demoEnabled",hasText("가상 데이터 준비") and isEnabled())
     count("logout",hasText("나가기"));count("home",hasText("카드 어드바이저"))
     val notices=JSONObject()
-    listOf("signup" to "가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.","demo" to "가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.","io" to "서버에 연결할 수 없습니다. 로컬 서버와 USB 연결을 확인해 주세요.","expired" to "로그인이 만료되었거나 계정 정보가 맞지 않습니다.","failed" to "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.").forEach{(code,value)->notices.put(code,runCatching{compose.onAllNodesWithText(value).fetchSemanticsNodes().size}.getOrDefault(-1))}
+    listOf("signup" to "가입했습니다. 내 카드를 등록해 시작해 보세요.","demo" to "가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.","io" to "서버에 연결할 수 없습니다. 로컬 서버와 USB 연결을 확인해 주세요.","expired" to "로그인이 만료되었거나 계정 정보가 맞지 않습니다.","failed" to "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.").forEach{(code,value)->notices.put(code,runCatching{compose.onAllNodesWithText(value).fetchSemanticsNodes().size}.getOrDefault(-1))}
     state.put("notices",notices)
     count("target",hasText(action));count("clickable",hasText(action) and hasClickAction());count("enabled",hasText(action) and hasClickAction() and isEnabled())
     count("logoutEnabled",hasText("나가기") and isEnabled());count("compareEnabled",hasText("카드 비교하기") and isEnabled())
@@ -84,16 +84,16 @@ class BlueDeviceFlowTest {
   compose.onNodeWithTag("email").performScrollTo().performTextInput(email)
   compose.onNodeWithTag("password").performScrollTo().performTextInput(password)
   click("가입")
-  waitFor("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
-  click("가상 데이터로 둘러보기  +")
+  waitFor("가입했습니다. 내 카드를 등록해 시작해 보세요.")
+  click("설정");click("가상 데이터로 기능 확인  +")
   click("가상 데이터 준비")
   waitFor("가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.")
   if(InstrumentationRegistry.getArguments().getString("stress")=="true")repeat(12){
    click("추천");click("금액 확인 후 카드 비교");waitFor("구매 후 전체 예산 70,000원")
    click("가계부");click("새로고침");waitFor("내역을 조회했습니다.");click("홈")
   }
-  top("카드 어드바이저");capture(evidenceDir,"00-home.png")
-  click("추천");click("금액 확인 후 카드 비교")
+  click("홈");top("카드 어드바이저");capture(evidenceDir,"00-home.png")
+  click("추천");click("가상 시연");click("금액 확인 후 카드 비교")
   waitFor("구매 후 전체 예산 70,000원")
   compose.onNodeWithText("쇼핑 예산 20,000원").assertExists()
   compose.onNodeWithText("고정비 고려 잔액 40,000원").assertExists()

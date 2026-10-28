@@ -47,7 +47,7 @@ class FinanceSyncFlowTest {
   fun sync(mode:String,status:String){fixture(mode);clickTag("syncStart");notice(syncOutcome(status))}
   try{
    scenario=ActivityScenario.launch(MainActivity::class.java)
-   awaitLoginForm();tag("email").performTextReplacement(email);tag("password").performTextReplacement(pw);click("가입");text("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+   awaitLoginForm();tag("email").performTextReplacement(email);tag("password").performTextReplacement(pw);click("가입");text("가입했습니다. 내 카드를 등록해 시작해 보세요.")
    val manuals=runBlocking{
     client.token=JSONObject(client.request("/v1/auth/login","POST",JSONObject().put("email",email).put("password",pw))).getString("accessToken")
     client.request("/v1/demo/setup","POST")

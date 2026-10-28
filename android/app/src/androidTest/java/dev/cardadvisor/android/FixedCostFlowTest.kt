@@ -40,7 +40,7 @@ class FixedCostFlowTest {
   val dir=File(compose.activity.getExternalFilesDir(null),"e2e/$runId").apply{mkdirs()}
   evidenceDir=dir
   try{
-  fill("email",email);fill("password",password);click("가입");waitFor("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+  fill("email",email);fill("password",password);click("가입");waitFor("가입했습니다. 내 카드를 등록해 시작해 보세요.")
   click("가상 데이터 준비");waitFor("가상 카드 2개와 예산이 준비되었습니다. 기존 예산은 유지합니다.")
   click("설정");click("반복 고정비 관리");waitFor("$month 고정비를 불러왔습니다.");click("고정비 일정 추가")
   fill("fixedName","테스트 월세");fill("fixedAmount","50000");fill("fixedDay","31");tap("fixedCategory_HOUSING");click("고정비 일정 저장");saved()

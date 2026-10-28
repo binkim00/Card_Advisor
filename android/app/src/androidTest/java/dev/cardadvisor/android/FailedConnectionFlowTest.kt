@@ -19,7 +19,7 @@ class FailedConnectionFlowTest {
  @Test fun failedRetryAndLocalRemoval(){
   val run=InstrumentationRegistry.getArguments().getString("runId")!!;UUID.fromString(run)
   ui.runOnUiThread{ui.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)}
-  input("email","failed-ui-$run@example.test");input("password","Synthetic-"+UUID.randomUUID());click("가입");wait("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+  input("email","failed-ui-$run@example.test");input("password","Synthetic-"+UUID.randomUUID());click("가입");wait("가입했습니다. 내 카드를 등록해 시작해 보세요.")
   click("설정");click("금융 연결 관리");wait("연결 정보를 불러오지 못했습니다. 최신 연결 조회로 다시 확인해 주세요.");tag("financeRefresh");wait("저장된 금융 연결이 없습니다.")
   ui.onNodeWithTag("financeEnvironment").assertTextEquals("합성 응답 검증용 · 실제 금융정보가 아닙니다.")
   create("9999");state("9999","연결 실패");tag("financeRetry_9999");ui.onNodeWithTag("financeOrg").assertDoesNotExist();Assert.assertTrue("Credential retained",ui.onNodeWithTag("financePassword").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.EditableText].text.isEmpty())

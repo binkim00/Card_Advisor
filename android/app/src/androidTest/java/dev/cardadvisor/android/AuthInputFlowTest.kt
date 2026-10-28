@@ -24,7 +24,7 @@ class AuthInputFlowTest {
   input("email",email);input("password","short");click("가입");wait("비밀번호는 12~128자로 입력해 주세요.");ui.onNodeWithTag("authError").assertIsDisplayed()
   Assert.assertEquals(before,Diagnostics.requestTraceSnapshot())
   try{
-   input("password",password);click("가입");wait("가입했습니다. 가상 데이터로 계산을 시작할 수 있습니다.")
+   input("password",password);click("가입");wait("가입했습니다. 내 카드를 등록해 시작해 보세요.")
    click("설정");click("나가기");wait("로그아웃했습니다.")
    input("password",password);click("가입");wait("이미 등록된 이메일일 수 있습니다. 로그인으로 확인해 주세요.");ui.onNodeWithTag("authError").assertIsDisplayed()
    input("password","Wrong-password-123");click("로그인");wait("이메일 또는 비밀번호를 확인해 주세요.");ui.onNodeWithTag("authError").assertIsDisplayed()
