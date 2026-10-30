@@ -15,7 +15,7 @@ class FinanceStatusControllerTest {
  @Test void statusIsExplicitlyDisabledAndUnverified()throws Exception{
   var db=mock(JdbcTemplate.class);
   when(db.queryForList(anyString(),any(Object.class))).thenReturn(List.of(Map.of("user_id",UUID.randomUUID())));
-  var mvc=MockMvcBuilders.standaloneSetup(new FinanceStatusController(new CodefClient(new CodefSettings(new Properties())),new ConnectedIdCipher(new Properties()))).addFilters(new AuthFilter(db)).build();
+  var mvc=MockMvcBuilders.standaloneSetup(new FinanceStatusController(new CodefClient(new CodefSettings(new Properties())),new ConnectedIdCipher(new Properties()),new org.springframework.mock.env.MockEnvironment())).addFilters(new AuthFilter(db)).build();
   mvc.perform(get("/v1/finance/codef/status")).andExpect(status().isUnauthorized());
   mvc.perform(get("/v1/finance/codef/status").header("Authorization","Bearer synthetic-app-token")).andExpect(status().isOk()).andExpect(jsonPath("$.provider").value("CODEF"))
    .andExpect(jsonPath("$.enabled").value(false)).andExpect(jsonPath("$.realConnectionVerified").value(false))

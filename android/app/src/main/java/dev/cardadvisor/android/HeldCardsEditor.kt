@@ -34,6 +34,7 @@ internal data class HeldSnapshot(val connectionVersion:Long,val active:Boolean,v
  val scope=rememberCoroutineScope{Dispatchers.Main.immediate}
  var connections by remember{mutableStateOf(emptyList<FinanceConnection>())}
  var selected by remember{mutableStateOf<FinanceConnection?>(null)};var snapshot by remember{mutableStateOf<HeldSnapshot?>(null)}
+ var preview by remember{mutableStateOf(false)}
  var ready by remember{mutableStateOf(false)};var busy by remember{mutableStateOf(false)};var stale by remember{mutableStateOf(true)}
  var notice by remember{mutableStateOf("저장된 카드사 연결을 확인합니다.")}
  var choice by remember{mutableStateOf<HeldCard?>(null)};var product by remember{mutableStateOf<HeldProduct?>(null)};var confirmed by remember{mutableStateOf(false)}
@@ -42,24 +43,26 @@ internal data class HeldSnapshot(val connectionVersion:Long,val active:Boolean,v
   finally{if(currentCoroutineContext().isActive){busy=false;onBusyChanged(false)}}
  }}
  suspend fun load(c:FinanceConnection){val value=HeldSnapshot.parse(api.request("/v1/finance/connections/${c.id}/held-cards"));snapshot=value;selected=c;stale=false;choice=null;product=null;confirmed=false}
- LaunchedEffect(Unit){action{
-  val status=FinanceReadiness.parse(api.request("/v1/finance/codef/status"));ready=status.ready
+ suspend fun loadConnections(){
+  val raw=api.request("/v1/finance/codef/status");val status=FinanceReadiness.parse(raw);ready=status.ready;preview=JSONObject(raw).optBoolean("privatePreviewEnabled",false)
   val rows=JSONArray(api.request("/v1/finance/connections"));val values=(0 until rows.length()).map{FinanceConnection.parse(rows.getJSONObject(it))};connections=values
   val first=values.firstOrNull{it.state==FinanceState.ACTIVE};if(first!=null)load(first)else stale=false
   notice="조회한 카드 중 본인 카드를 선택해 등록하세요. 상품 연결은 직접 확인한 경우에만 선택합니다."
- }}
+ }
+ LaunchedEffect(Unit){action{loadConnections()}}
  Text("보유 카드 불러오기",style=MaterialTheme.typography.titleLarge)
  Text(notice,Modifier.testTag("heldNotice"))
+ if(preview){Text("비공개 체험 · 실제 카드사 연결 꺼짐");Button(enabled=!busy,onClick={action{api.request("/v1/demo/finance-preview","POST",JSONObject());loadConnections();notice="체험 연결을 준비했습니다. 아래에서 가상 보유 카드를 조회해 주세요."}},modifier=Modifier.fillMaxWidth().testTag("heldPreviewSetup")){Text("체험용 카드 연결 준비")}}
  if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
  if(!ready)Text("현재 카드사 실시간 조회는 비활성 상태입니다. 저장된 카드 목록은 확인할 수 있습니다.")
  OutlinedButton(enabled=!busy,onClick=onConnect){Text("카드사 연결 관리")}
- for(c in connections)OutlinedButton(enabled=!busy,onClick={action{load(c)}},modifier=Modifier.testTag("heldConnection_${c.organization}")){Text("카드사 ${c.organization} 선택")}
+ for(c in connections)OutlinedButton(enabled=!busy,onClick={action{load(c)}},modifier=Modifier.testTag("heldConnection_${c.organization}")){Text(if(preview&&c.organization=="9999")"체험 카드 선택" else "카드사 ${c.organization} 선택")}
  val c=selected;val data=snapshot
  if(c!=null&&data!=null){
   Button(enabled=!busy&&ready&&data.active&&!stale,onClick={action{
    val value=HeldSnapshot.parse(api.request("/v1/finance/connections/${c.id}/held-cards/refresh","POST",JSONObject().put("expectedConnectionVersion",data.connectionVersion).put("confirmed",true)))
    snapshot=value;stale=false;choice=null;product=null;confirmed=false;notice="보유 카드를 조회했습니다. 선택한 카드를 확인한 뒤 내 카드로 등록하세요."
-  }},modifier=Modifier.fillMaxWidth().testTag("heldFetch")){Text("카드사에서 보유 카드 조회")}
+  }},modifier=Modifier.fillMaxWidth().testTag("heldFetch")){Text(if(preview)"체험 보유 카드 조회" else "카드사에서 보유 카드 조회")}
   OutlinedButton(enabled=!busy,onClick={action{load(c);notice="서버에 저장된 상태를 다시 확인했습니다."}},modifier=Modifier.testTag("heldRecover")){Text("저장 상태 다시 확인")}
   if(data.cards.isEmpty())Text("아직 조회한 카드가 없어요. 보유 카드 조회 버튼을 눌러 주세요.")
   data.cards.forEachIndexed{i,card->DesignPanel{

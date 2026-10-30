@@ -1,3 +1,18 @@
+# 비공개 체험 배포 준비 — 2026-10-30
+
+## 목표·결정
+사용자 승인으로 최신 카드 API/V30·체험 공급자를 사설 서버에 배포하고 폰 APK를 준비한다. 실제 보유 카드 자동 조회는 계속 OFF. 원본 main, 기존 여기일지도 서비스/DB 보존, API768MiB/DB384MiB·CPU0.50/0.25 유지.
+
+## 완료·증거
+synthetic-preview 전용 공급자/OAuth는 컨테이너 loopback 고정, 실공급자 파일 설정이 있으면 시작 거부. 별도 체험 키 사용. 사용자별 체험 연결 준비·조회·선택 등록 및 명시 배너, 독립 체험 APK 이름 제공. 로컬 합성 PG/계약/정규화 검사와 JAR package·이미지 build 성공, Android debug/test/JVM/lint 성공. .run/private-preview-{backend,android,image}.log.
+
+## 남은 작업
+이번 소스의 실제 서버 반영·백업 복원 확인·서버/앱 실제 HTTPS 왕복·다운로드 제공은 아직 미실행. 이미지 e21da534, 실제 금융/기관/폰 검증을 합성 완료로 확대하지 않는다.
+
+## 다음 행동 하나
+scripts/update-cohost-private-preview.py로 카드 전용 DB 백업 복원과 API 단독 교체·합성 왕복을 수행한다.
+
+---
 # 보유 카드 불러오기→내 카드 등록 구현·합성 검증 완료 — 2026-10-28
 
 ## 목표·확정 결정

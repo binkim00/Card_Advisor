@@ -3631,6 +3631,19 @@
           }
         ]
       }
+    },
+    "/demo/finance-preview": {
+      "post": {
+        "summary": "synthetic-preview 전용: 본인 합성 카드 연결 준비, 실제 기관 호출 없음",
+        "responses": {
+          "200": {
+            "description": "새 연결 또는 기존 본인 체험 연결"
+          },
+          "409": {
+            "description": "체험 연결 확인 필요"
+          }
+        }
+      }
     }
   },
   "components": {

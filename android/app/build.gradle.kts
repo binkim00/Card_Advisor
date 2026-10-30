@@ -21,6 +21,7 @@ android {
    buildConfigField("String","API_BASE_URL","\"$endpoint\"")
   }
   val previewSuffix=providers.gradleProperty("advisor.previewSuffix").orNull
+  manifestPlaceholders["advisorAppLabel"]=if(previewSuffix==null) "카드 어드바이저" else "카드 어드바이저 체험"
   if(previewSuffix!=null){require(previewSuffix==".designreview"){"Only the isolated design review suffix is supported"};applicationIdSuffix=previewSuffix}
  }
  buildFeatures { compose=true; buildConfig=true }
