@@ -24,6 +24,7 @@ old_env=(APP/'runtime.env').read_text();(evidence/'runtime-before.env').write_te
 base=['docker','compose','--env-file',str(APP/'runtime.env'),'-f',str(APP/'compose.yaml'),'-f',str(APP/'compose.images.yaml')]
 def query(sql):return run(['docker','exec',DB,'psql','-U','card_advisor','-d','card_advisor','-At','-v','ON_ERROR_STOP=1','-c',sql]).strip()
 print('Backing up card-only database and checking restore',flush=True)
+source_schema=query('SELECT max(version::int) FROM flyway_schema_history WHERE success;');assert source_schema in {'29','30'}
 backup=evidence/'card-before.pgdump'
 with backup.open('wb') as f:subprocess.run(['docker','exec',DB,'pg_dump','-U','card_advisor','-d','card_advisor','-Fc'],stdout=f,check=True,timeout=90)
 os.chmod(backup,0o600)
@@ -32,10 +33,15 @@ try:
  image=run(['docker','inspect','--format','{{.Config.Image}}',DB]).strip()
  run(['docker','run','-d','--rm','--name',restore,'--network','none','--memory','256m','--memory-swap','256m','--cpus','0.25','-e','POSTGRES_HOST_AUTH_METHOD=trust','-e','POSTGRES_DB=verify_restore',image])
  for _ in range(30):
-  if subprocess.run(['docker','exec',restore,'pg_isready','-U','postgres'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:break
+  if subprocess.run(['docker','exec',restore,'psql','-h','127.0.0.1','-U','postgres','-d','verify_restore','-At','-c','SELECT 1'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:break
   time.sleep(1)
- with backup.open('rb') as f:subprocess.run(['docker','exec','-i',restore,'pg_restore','--no-owner','--no-privileges','-U','postgres','-d','verify_restore'],stdin=f,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=90)
- assert run(['docker','exec',restore,'psql','-U','postgres','-d','verify_restore','-At','-c','SELECT max(version::int) FROM flyway_schema_history WHERE success;']).strip()=='29'
+ with backup.open('rb') as f:
+  restored=subprocess.run(['docker','exec','-i',restore,'pg_restore','--exit-on-error','--no-owner','--no-privileges','-U','postgres','-d','verify_restore'],stdin=f,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=90)
+ if restored.returncode:
+  log=evidence/'restore-error-private.log';log.write_bytes(restored.stderr);os.chmod(log,0o600)
+  classes=[label for needle,label in [(b'does not exist','missing-resource'),(b'already exists','already-exists'),(b'permission','permission'),(b'connection','connection'),(b'unsupported','unsupported-format')] if needle in restored.stderr]
+  raise RuntimeError('Card backup restore failed: '+','.join(classes or ['unclassified']))
+ assert run(['docker','exec',restore,'psql','-U','postgres','-d','verify_restore','-At','-c','SELECT max(version::int) FROM flyway_schema_history WHERE success;']).strip()==source_schema
  report['cardBackupRestoreVerified']=True
 finally:run(['docker','stop',restore])
 backup_key=evidence/'backup-key';backup_key.write_text(secrets.token_urlsafe(48));os.chmod(backup_key,0o400)
@@ -68,7 +74,7 @@ try:
  else:raise RuntimeError('Card preview health failed')
  assert query('SELECT max(version::int) FROM flyway_schema_history WHERE success;')=='30'
  limits=run(['docker','inspect','--format','{{.HostConfig.Memory}} {{.HostConfig.MemorySwap}} {{.HostConfig.NanoCpus}}',API]).strip();assert limits=='805306368 805306368 500000000'
- blanks=run(['docker','inspect','--format','{{range .Config.Env}}{{if or (eq . "CODEF_CONFIG_FILE=") (eq . "CODEF_STORAGE_KEY_FILE=") (eq . "OPENAI_CONFIG_FILE=") (eq . "ACCOUNT_MAIL_CONFIG_FILE=")}}{{println .}}{{end}}{{end}}',API]).splitlines();assert len(blanks)==4
+ blanks=[line for line in run(['docker','inspect','--format','{{range .Config.Env}}{{if or (eq . "CODEF_CONFIG_FILE=") (eq . "CODEF_STORAGE_KEY_FILE=") (eq . "OPENAI_CONFIG_FILE=") (eq . "ACCOUNT_MAIL_CONFIG_FILE=")}}{{println .}}{{end}}{{end}}',API]).splitlines() if line.strip()];assert len(blanks)==4
  print('Checking private preview API with disposable synthetic users',flush=True)
  session=api('/auth/register','POST',{'email':'deploy-preview-'+uuid.uuid4().hex+'@example.test','password':secrets.token_urlsafe(24)});token=session['accessToken']
  status=api('/finance/codef/status',token=token);assert status['privatePreviewEnabled'] and status['syntheticProvider'] and not status['realInstitutionAccessEnabled']

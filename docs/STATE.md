@@ -1,3 +1,22 @@
+# 비공개 체험 서버·폰 설치 APK 준비 완료 — 2026-10-30
+
+## 목표·결정
+사용자 승인: 최신 카드 기능을 기존 서버의 별도 카드 API에 반영하고 설치 APK 제공. 기존 여기일지도 서비스/DB와 메모리·CPU 제한 보존. 실금융은 계속 OFF. 실제 자동 조회 대신 명시 체험 모드, 실제 지원 상품 직접 등록 유지.
+
+## 완료·증거
+- API 소스f06ccc4/이미지e21da534, 카드 전용 DB V30, APIhealthy·OOMfalse·restart0. API768MiB/0.50CPU·DB384MiB/0.25CPU·추가swap0 유지. 기존 모든 비API 컨테이너 ID/기동/한도 동일, 기존API200·기존 DB SQL0. 카드DB 프로세스 재시작 없음.
+- 카드DB 사전 백업을 독립 PG에서 복원 확인 후 암호화, 평문0. 코드·계정/운영 비밀은 APK/Git에 미포함. 실설정 공백 + 체험 공급자/OAuth loopback 강제, realInstitutionAccessEnabled=false. 별도 체험 키 사용.
+- 로컬62검사/package·이미지build, Android JVM15/lint오류0·경고16·debug/testAPK, 서버 합성 API 흐름 및 제공 APK의 실제 서버 에뮬레이터 UI1흐름 통과. 검사에서 만든 합성 계정3개는 DB 결과 대조 후 정확히 삭제. 복원 준비·빈줄 검사·UI 대기 실패와 수정 근거도 docs/verification/2026-10-30-private-preview-deployment.md에 구분.
+- Tailscale19443 루트/기존443 보존, 카드 Funnel없음. /download/card-advisor-preview.apk 파일만 추가. SHA ef94cf1d, outputs/private-preview에 APK/설치법/검증 근거 보관. 실제 폰/실기관 검증은 미실행.
+
+## 남은 범위
+폰 자체 Tailscale/설치·터치 확인은 사용자 기기에서 필요. 실제 카드사 조회·인증·모든 상품 혜택/장시간부하/독립 재해복구·호스트재부팅 검증은 별도. [체험] 카드는 실제 보유 카드가 아니다. 미확인 규칙은 계산에서 제외.
+
+## 다음 행동 하나
+사용자가 폰에서 Tailscale 연결 후 APK를 설치해 체험 흐름을 확인하도록 설치 주소를 전달한다. 실금융/공개 전환은 하지 않는다.
+
+---
+
 # 비공개 체험 배포 준비 — 2026-10-30
 
 ## 목표·결정

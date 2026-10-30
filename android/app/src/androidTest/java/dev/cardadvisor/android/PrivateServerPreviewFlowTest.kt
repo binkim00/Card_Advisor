@@ -23,7 +23,7 @@ class PrivateServerPreviewFlowTest {
   ui.onNodeWithTag("heldSave").assertIsNotEnabled();tag("heldConfirm");tag("heldSave")
   ui.waitUntil(20000){ui.onAllNodesWithTag("heldRegistered_0").fetchSemanticsNodes().isNotEmpty()}
   click("내 카드로 돌아가기")
-  ui.onNodeWithText("[체험] 쇼핑 카드").assertExists()
+  await("보유 카드 등록됨 · 혜택 규칙 미확인, 추천·실적 계산 제외");ui.onNodeWithText("[체험]",substring=true).assertExists()
   ui.onNodeWithText("보유 카드 등록됨 · 혜택 규칙 미확인, 추천·실적 계산 제외").assertExists()
  }
 }
