@@ -18,7 +18,7 @@ public class SyntheticPreviewConfiguration {
  static void requireBlank(String...paths){for(String path:paths)if(path!=null&&!path.isBlank())throw new IllegalStateException("PRIVATE_PREVIEW_REQUIRES_REAL_PROVIDER_CONFIGURATIONS_DISABLED");}
  @Bean(destroyMethod="close") public PreviewGateway previewGateway(
   @Value("${codef.config-file:}")String config,@Value("${codef.storage-key-file:}")String storage){
-  requireBlank(config,storage,System.getenv("CODEF_CONFIG_FILE"),System.getenv("CODEF_STORAGE_KEY_FILE"),System.getenv("OPENAI_CONFIG_FILE"),System.getenv("ACCOUNT_MAIL_CONFIG_FILE"));
+  requireBlank(config,storage,System.getenv("CODEF_CONFIG_FILE"),System.getenv("CODEF_STORAGE_KEY_FILE"),System.getenv("ACCOUNT_MAIL_CONFIG_FILE"));
   return new PreviewGateway();
  }
  @Bean @Primary public ConnectedIdCipher previewCipher(@Value("${card.preview.key-file:}")String path){

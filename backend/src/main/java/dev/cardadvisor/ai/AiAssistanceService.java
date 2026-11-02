@@ -41,7 +41,7 @@ public class AiAssistanceService {
    if(c.benefitWon()!=null)facts.add(new Fact("BENEFIT","추천 카드의 이번 결제 예상 혜택은 "+money(c.benefitWon())+"입니다. 실제 카드사 확정값이 아닙니다.",Map.of("benefitWon",c.benefitWon())));
    if(c.targetReached())facts.add(new Fact("TARGET","입력 기준으로 다음 달용 실적 기준을 채울 수 있습니다. 이번 혜택 자격을 올리거나 다음 달 혜택을 보장하지 않습니다.",Map.of("targetReached",true)));
   }else facts.add(new Fact("HELD","미확인 조건이 있어 카드 추천을 보류합니다. 입력과 출처를 확인해 주세요.",Map.of("held",true)));
-  return choose(user,"EXPLAIN_RECOMMENDATION",facts);
+  return choose(user,"EXPLANATION",facts);
  }
  public record Comparison(String month,int throughDay,String previousMonth,int previousThroughDay,long knownCurrentWon,long knownPreviousWon,Long differenceWon,String status){}
  public record Analysis(String month,AdvisorService.BudgetSummary summary,Assistance assistance,AdvisorService.BudgetInput proposedBudget,String proposalStatus,Comparison comparison){}
