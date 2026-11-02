@@ -18,10 +18,13 @@ ev=APP/'evidence'/('ai-'+datetime.datetime.now(datetime.timezone.utc).strftime('
 (ev/'before.json').write_text(json.dumps({'containers':before,'serve':json.loads(serve)},indent=2))
 runtime=(APP/'runtime.env').read_text();(ev/'runtime.env').write_text(runtime);os.chmod(ev/'runtime.env',0o600)
 base=['docker','compose','--env-file',str(APP/'runtime.env'),'-f',str(APP/'compose.yaml'),'-f',str(APP/'compose.images.yaml'),'-f',str(APP/'compose.preview.yaml')]
-override=APP/'compose.ai.yaml';assert not override.exists()
-key=APP/'secrets/openai-api-key.txt';config=APP/'secrets/openai.properties';assert not key.exists() and not config.exists()
-assert (STAGE/'openai-api-key.txt').stat().st_size>0
-os.replace(STAGE/'openai-api-key.txt',key);key.write_text(key.read_text(encoding='utf-8-sig').strip());os.chown(key,10001,10001);os.chmod(key,0o400)
+override=APP/'compose.ai.yaml'
+key=APP/'secrets/openai-api-key.txt';config=APP/'secrets/openai.properties'
+if not key.exists():
+ assert not config.exists() and (STAGE/'openai-api-key.txt').stat().st_size>0
+ os.replace(STAGE/'openai-api-key.txt',key);key.write_text(key.read_text(encoding='utf-8-sig').strip());os.chown(key,10001,10001);os.chmod(key,0o400)
+else:
+ assert key.stat().st_uid==10001 and (key.stat().st_mode & 0o777)==0o400 and config.exists()
 config.write_text('enabled=true\nmodel=gpt-4.1-mini\napiKeyFile=/run/secrets/openai-api-key.txt\n');os.chown(config,10001,10001);os.chmod(config,0o400)
 override.write_text('services:\n  api:\n    environment:\n      OPENAI_CONFIG_FILE: /run/secrets/openai.properties\n    secrets:\n      - source: OPENAI_CONFIG\n        target: openai.properties\n      - source: OPENAI_KEY\n        target: openai-api-key.txt\nsecrets:\n  OPENAI_CONFIG:\n    file: /opt/card-advisor/secrets/openai.properties\n  OPENAI_KEY:\n    file: /opt/card-advisor/secrets/openai-api-key.txt\n')
 report={'sourceCommit':m['sourceCommit'],'success':False,'financeEnabled':False,'existingDbAccessed':False,'apkRebuildRequired':False}
@@ -62,6 +65,7 @@ try:
   status=api('/finance/codef/status');assert status['privatePreviewEnabled'] and status['syntheticProvider'] and not status['realInstitutionAccessEnabled']
   connection=api('/demo/finance-preview','POST',{})['connection']
   held=api('/finance/connections/'+connection['id']+'/held-cards/refresh','POST',{'confirmed':True,'expectedConnectionVersion':connection['version']});assert len(held['cards'])==2
+  api('/finance/connections/'+connection['id']+'/disconnect','POST',{'expectedVersion':api('/finance/connections/'+connection['id'])['version']},{'Idempotency-Key':str(uuid.uuid4())})
   report['actualServerAiExplanationAndInsights']=True;report['consentAndWithdrawalPassed']=True;report['syntheticHeldCardsPassed']=True
  finally:
   api('/me','DELETE',extra={'X-Confirm-Delete':'DELETE_ACCOUNT'});token=None
